@@ -16,9 +16,6 @@ from astropy.coordinates import SkyCoord
 from astropy.io import ascii
 from astropy.table import Table
 
-from lmfit import Parameters
-import mylmfit1dfun_gauss
-
 from astropy.cosmology import FlatLambdaCDM
 
 import matplotlib as mpl, matplotlib.backends.backend_pdf, matplotlib.pyplot as plt, matplotlib.cm as cm
