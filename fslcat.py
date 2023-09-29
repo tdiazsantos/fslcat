@@ -40,15 +40,15 @@ class fslcat:
 
     def get_filename(self, xkeyws, ykeyws, zkeyws=None):
         
-        plotname = ''.join(ykeyws['1'])
-        if '2' in ykeyws.keys(): plotname += ''.join(ykeyws['2'])
+        plotname = ''.join(ykeyws['1'][0:2])
+        if '2' in ykeyws.keys(): plotname += ''.join(ykeyws['2'][0:2])
         plotname += '_vs_'        
-        plotname += ''.join(xkeyws['1'])
-        if '2' in xkeyws.keys(): plotname += ''.join(xkeyws['2'])
+        plotname += ''.join(xkeyws['1'][0:2])
+        if '2' in xkeyws.keys(): plotname += ''.join(xkeyws['2'][0:2])
         if zkeyws != None:
             plotname += '_sort_'        
-            plotname += ''.join(zkeyws['1'])
-            if '2' in zkeyws.keys(): plotname += ''.join(zkeyws['2'])
+            plotname += ''.join(zkeyws['1'][0:2])
+            if '2' in zkeyws.keys(): plotname += ''.join(zkeyws['2'][0:2])
 
         return plotname
 
@@ -144,7 +144,7 @@ class fslcat:
         return ax
 
 
-    def plot(self, xkeyws={'1':['', 'LFIR']}, ykeyws={'1':['[CII]158', 'Lum'], '2':['','LFIR','/']}, zkeyws=None, pre_select={}, outdir='./', r_cross=0.01, color='red', **kwargs):
+    def plot(self, xkeyws={'1':['', 'LFIR']}, ykeyws={'1':['[CII]158', 'Lum'], '2':['','LFIR','/']}, zkeyws=None, pre_select={}, outdir='./figures/', r_cross=0.01, color='red', **kwargs):
         """
         The axis keywords specify the quantity to be ploted in the x, y (and optionally z) axes.
         Each quantity is constructed from one or two parameters from the catalog.
@@ -175,7 +175,6 @@ class fslcat:
             xids, zids = axis.cross_corr(self.x.cat, self.z.cat, self.x.keyws, self.z.keyws, keep_all=True, r_cross=r_cross, **kwargs)
             print('Updating z-axis')
             self.z.update(zids, self.x.cat)
-            
             
             
         # PLOT
