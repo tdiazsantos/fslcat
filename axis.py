@@ -9,7 +9,11 @@ from astropy.coordinates import SkyCoord
 
 from arrayop import arrayop
 
-line_list = ['[OIII]52um', '[NIII]57um', '[OI]63um', '[OIII]88um', '[NII]122um','[CII]158um', '[OI]146um', '[NII]205um', '[CI]370um', '[CI]609um']
+data_dict = {'lines':['[OIII]52um', '[NIII]57um', '[OI]63um', '[OIII]88um', '[NII]122um','[CII]158um', '[OI]146um', '[NII]205um', '[CI]370um', '[CI]609um'],
+             'types':['MS/SFG','SB/SMG','QSO/AGN','Opt-Sel','ALMA-Sel','Cluster','DLAHost']}
+
+color_dict = {'lines':['skyblue',   'magenta',    'steelblue', 'dodgerblue', 'palegreen', 'crimson',      'royalblue',  'limegreen',      'coral', 'orange'],
+              'types':['forestgreen','red','blue','deepskyblue','darkorchid','darkorange','brown']}
 
 
 ##### Function that performs a self cross match within a catalog, removing duplicates and returning (the dataframe entries of) individual sources
@@ -25,7 +29,16 @@ def self_cross_corr(cat, axis_keyws, r_cross):
     while len(tmpcat) > 0:
         
         # Do not consider sources without coordinates or that have NaN values for the requested quantity
-        if tmpcat.iloc[0]['RA'] is np.nan or np.isnan(tmpcat.iloc[0][axis_keyws[1]]):
+        exclude = False
+        if tmpcat.iloc[0]['RA'] is np.nan: exclude = True
+        if isinstance(tmpcat.iloc[0][axis_keyws[0]], float):
+            if np.isnan(tmpcat.iloc[0][axis_keyws[0]]): exclude = True
+        else:
+            if tmpcat.iloc[0][axis_keyws[0]] == '': exclude = True
+        
+        #if tmpcat.iloc[0]['RA'] is np.nan or np.isnan(tmpcat.iloc[0][axis_keyws[0]]): exclude = True
+
+        if exclude == True:
             coord_cat = np.delete(coord_cat, [0])
             tmpcat.drop(tmpcat.index.values[0], inplace=True)
             continue
@@ -39,18 +52,21 @@ def self_cross_corr(cat, axis_keyws, r_cross):
             cross_ids.append(tmpcat.index.values[idxcat[0]])
         elif len(idxcat) > 1:
             # Find valid Ids
-            v_ids = np.where(np.isnan(tmpcat.iloc[idxcat][axis_keyws[1]]).values == False)[0]
-            # Select the most recent value from valid cross_ids
+            if isinstance(tmpcat.iloc[0][axis_keyws[0]], float):
+                v_ids = np.where(np.isnan(tmpcat.iloc[idxcat][axis_keyws[0]]).values == False)[0]
+                # Select the most recent value from valid cross_ids
+            else:
+                v_ids = np.where(tmpcat.iloc[idxcat][axis_keyws[0]] != '')[0]
             cross_ids.append(tmpcat.index.values[idxcat[v_ids[np.nanargmax(tmpcat.iloc[idxcat[v_ids]]['Line_year'])]]])
-            if np.isnan(tmpcat.loc[cross_ids[-1]][axis_keyws[1]]): ipdb.set_trace()
+            #if np.isnan(tmpcat.loc[cross_ids[-1]][axis_keyws[0]]): ipdb.set_trace()
         else:
-            ValueError('No entries were found, which is impossible')
+            raise ValueError('No entries were found, which is impossible')
 
         # Remove already matched entries
         coord_cat = np.delete(coord_cat, idxcat)
         tmpcat.drop(tmpcat.index.values[idxcat], inplace=True)
 
-    print('Out of', len(cat), 'entries in the', axis_keyws[0], axis_keyws[1], 'catalog,', len(cross_ids), 'independent entries were found')
+    print('Out of', len(cat), 'entries in the', axis_keyws[1], axis_keyws[0], 'catalog,', len(cross_ids), 'independent entries were found')
 
     # Return the dataframe cross_ids
     return np.array(cross_ids)
@@ -82,14 +98,14 @@ def cross_corr(cat1, cat2, axis1_list, axis2_list, r_cross, keep_all=False):
             if keep_all == True:
                 ids.append(tmpcat1.index.values[i])
                 cross_ids.append(np.nan)
-            continue
+            #continue
         elif len(idxcat) == 1:
             ids.append(tmpcat1.index.values[i])
             cross_ids.append(tmpcat2.index.values[idxcat[0]])
         else:
             # Select the most recent value from valid cross_ids
             ids.append(tmpcat1.index.values[i])
-            v_ids = np.where(np.isnan(tmpcat2.iloc[idxcat][axis2_keyws[1]]).values == False)[0]
+            v_ids = np.where(np.isnan(tmpcat2.iloc[idxcat][axis2_keyws[0]]).values == False)[0]
             cross_ids.append(tmpcat2.index.values[idxcat[v_ids[np.nanargmax(tmpcat2.iloc[idxcat[v_ids]]['Line_year'])]]])
         
     print('Out of', len(cat1), 'entries in the', axis1_list, 'catalog(s),', len(cross_ids), 'independent cross-matches were found in the', axis2_list, 'catalog(s) containing', len(cat2), 'entries')
@@ -102,9 +118,10 @@ def cross_corr(cat1, cat2, axis1_list, axis2_list, r_cross, keep_all=False):
 
 class axis:
 
-    def __init__(self, axis_keyws, cat=None, cross_match=True, r_cross=0.01, data=None, err=None, lim=None, op=None):
+    def __init__(self, axis_keyws, cat=None, cross_match=True, r_cross=0.01, data=None, err=None, lim=None, op=None, name=''):
 
         self.keyws = axis_keyws
+        self.name = name
 
         if cat is not None:
             # If we want to do a self cross match to generate a catalog of unique sources
@@ -112,10 +129,24 @@ class axis:
                 cross_ids = self_cross_corr(cat, axis_keyws, r_cross)
                 self.cross_ids = cross_ids
                 
-                data = cat.loc[cross_ids][axis_keyws[1]].values
-                if axis_keyws[1]+'_err' in cat.columns:
-                    err = cat.loc[cross_ids][axis_keyws[1]+'_err'].values
-                    lim_inds = cat.loc[cross_ids][axis_keyws[1]].values == 0.
+                data = cat.loc[cross_ids][axis_keyws[0]].values
+                turn2float = True
+                if len(data) > 0:
+                    if isinstance(data[0], str):
+                        if data[0].isdigit() == False: turn2float = False
+
+                if turn2float:
+                    try:
+                        data = pd.to_numeric(cat.loc[cross_ids][axis_keyws[0]], errors='coerce').astype('float').values
+                    except:
+                        ipdb.set_trace()
+                
+                if axis_keyws[0]+'_err' in cat.columns:
+                    if turn2float == True:
+                        err = pd.to_numeric(cat.loc[cross_ids][axis_keyws[0]+'_err'], errors='coerce').astype('float').values
+                    else:
+                        err = cat.loc[cross_ids][axis_keyws[0]+'_err'].values
+                    lim_inds = cat.loc[cross_ids][axis_keyws[0]].values == 0.
                     data[lim_inds] = err[lim_inds]
                     err[lim_inds] = np.nan
                     lim = np.zeros(len(cross_ids))
@@ -133,7 +164,7 @@ class axis:
 
         elif data is None:
             # In this case no catalog will be attached to the self
-            ValueError('Data needs to be provided if there is no catalog.')
+            raise ValueError('Data needs to be provided if there is no catalog.')
 
         self.data = data
         self.err = err
@@ -152,7 +183,7 @@ class axis:
             ith_ids = []
             for i, row_id in enumerate(self.cat.index):
                 if row_id in ids: ith_ids.append(i)
-            ith_ids = np.array(ith_ids)
+            ith_ids = np.array(ith_ids, dtype=int)
 
             self.data = self.data[ith_ids]
             self.err = self.err[ith_ids]
@@ -182,7 +213,7 @@ class axis:
                 self.cat = tmpcat
                 
             else:
-                ValueError('This update likely comes from a keep_all=True cross match. If so, the original catalog must be provided')
+                raise ValueError('This update likely comes from a keep_all=True cross match. If so, the original catalog must be provided')
 
 
 
@@ -191,7 +222,7 @@ class axis:
         
         op = operator
         if op is None: op = axis2.op
-        if op is None: ValueError('An operator is needed')
+        if op is None: raise ValueError('An operator is needed')
 
         keyws = {'1':self.keyws, '2':axis2.keyws}
 
@@ -223,7 +254,7 @@ class axis:
                 err[nullinds] = np.nan
 
         else:
-            ValueError('Operator not found')
+            raise ValueError('Operator not found')
             
         # Create the new resulting axis and combine the labels and units
         if op != 'joint':
@@ -246,43 +277,45 @@ class axis:
     def get_label(self):
         
         unit = ''
-        if self.keyws[1] == 'LIR' or self.keyws[1] == 'LIR_LFIR':
+        if self.keyws[0] == 'z':
+            label = r'z'
+        elif self.keyws[0] == 'Ldist':
+            label = r'D\,$\rm{_{L}}$'
+        elif self.keyws[0] == 'Type':
+            label = r'Type'
+        elif self.keyws[0] == 'Instrument':
+            label = r'Instrument'
+        elif self.keyws[0] == 'Line':
+            label = r'Line'
+        elif self.keyws[0] == 'LIR' or self.keyws[0] == 'LIR_LFIR':
             label = r'L$\rm{_{IR}}$'
             unit = r'[L$\rm{_\odot}$]'
-        elif self.keyws[1] == 'LFIR' or self.keyws[1] == 'LFIR_LIR':
+        elif self.keyws[0] == 'LFIR' or self.keyws[0] == 'LFIR_LIR':
             label = r'L$\rm{_{FIR}}$'
             unit = r'[L$\rm{_\odot}$]'
-        elif self.keyws[1] == 'Instrument':
-            label = r'Instrument'
-        elif self.keyws[1] == 'z':
-            label = r'z'
-        elif self.keyws[1] == 'Ldist':
-            label = r'D\,$\rm{_{L}}$'
-        elif self.keyws[1] == 'Line':
-            label = r'Line'
-        elif self.keyws[1] == 'Line_year':
+        elif self.keyws[0] == 'Line_year':
             label = r'Year'
-        elif self.keyws[1] == 'Mag':
+        elif self.keyws[0] == 'Mag':
             label = r'Magnification'
-        elif self.keyws[1] == 'Line_rf':
+        elif self.keyws[0] == 'Line_rf':
             label = r'Line rest-frame'
         else:
             unit = ''
-            if self.keyws[0]+'um' in line_list:
-                if self.keyws[1] == 'Flux':
-                    label = r'f$\rm{_{'+self.keyws[0]+'}}$'
+            if self.keyws[1]+'um' in data_dict['lines']:
+                if self.keyws[0] == 'Flux':
+                    label = r'f$\rm{_{'+self.keyws[1]+'}}$'
                     unit = r'[Jy km s$^{-1}$]'
-                elif self.keyws[1] == 'Lum':
-                    label = r'L$\rm{_{'+self.keyws[0]+'}}$'
+                elif self.keyws[0] == 'Lum':
+                    label = r'L$\rm{_{'+self.keyws[1]+'}}$'
                     unit = r'[L$\rm{_\odot}$]'
-                elif self.keyws[1] == 'FWHM':
-                    label = r'FWHM$\rm{_{'+self.keyws[0]+'}}$'
+                elif self.keyws[0] == 'FWHM':
+                    label = r'FWHM$\rm{_{'+self.keyws[1]+'}}$'
                     unit = r'[km s$^{-1}$]'
-                elif self.keyws[1] == 'Cont':
-                    label = r'Cont$\rm{_{'+self.keyws[0]+'}}$'
+                elif self.keyws[0] == 'Cont':
+                    label = r'Cont$\rm{_{'+self.keyws[1]+'}}$'
                     unit = r'[mJy]'
             else:
-                ValueError('Line not found in list of lines')
+                raise ValueError('Line not found in list of lines')
 
         self.label = [label, unit]
 
@@ -317,3 +350,26 @@ class axis:
                 if parenth == True: lab[1]='('+lab[1]+')'
 
         return lab
+
+
+
+    def get_color(self, lab):
+
+        if lab == 'lines':
+            try:
+                color_ind = []
+                color_ind.append(data_dict[lab].index(self.keyws['1'][1]+'um'))
+            except:
+                ipdb.set_trace()
+                raise ValueError('At least one line in',self.keyws['1'][1],'is not present in line list')
+        elif lab == 'types':
+            try:
+                color_ind = []
+                for i in range(len(self.data)): color_ind.append(data_dict[lab].index(self.data[i]))
+            except:
+                ipdb.set_trace()
+                raise ValueError('At least one type in',self.data, 'is not present in type list')
+
+
+        return [color_dict[lab][k] for k in color_ind]
+
