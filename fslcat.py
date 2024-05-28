@@ -74,7 +74,7 @@ class fslcat:
 
 
 
-    def check_scale_ir(self, ax):
+    def check_scale(self, ax):
 
         if ax.keyws[0] == 'LFIR_LIR':
             lir_inds = ax.cat['LFIR_LIR_type'].values == 'LIR'
@@ -84,7 +84,18 @@ class fslcat:
             lfir_inds = ax.cat['LIR_LFIR_type'].values == 'LFIR'
             ax.data[lfir_inds] *= 2.
             ax.err[lfir_inds] *= 2.
-            
+        # The continua is transformed to rest-frame
+        elif ax.keyws[0] == 'Cont':
+            ax.data /= (1+ax.cat['z'].values)
+            ax.err /= (1+ax.cat['z'].values)
+        
+        # The Flux, when obtained from the Luminosity, is transformed to rest-frame
+        if len(ax.keyws) == 3:
+            if ax.keyws[0] == 'Lum' and ax.keyws[2] == 'Flux':
+                ax.data *= 961.54 / ax.cat['LDist'].values**2 / (ax.cat['Line_rf'].values / (1+ax.cat['z'].values)) / (1+ax.cat['z'].values)  # Sdv = L * 961.54 / DL^2 / nu_obs
+                ax.err *= 961.54 / ax.cat['LDist'].values**2 / (ax.cat['Line_rf'].values / (1+ax.cat['z'].values)) / (1+ax.cat['z'].values)
+
+
         return ax
 
 
@@ -138,23 +149,26 @@ class fslcat:
         # Select on the line, if any, and on other properties, if any
         ax_cat = self.pre_select(ax_pre_selection)
         # Build the data dictionary of the axis
-        ax = axis.axis(keyws['1'], ax_cat, **kwargs)
-        ax = self.check_scale_ir(ax)
+        ax = axis.axis(keyws['1'], cat=ax_cat, **kwargs)
+        ax = self.check_scale(ax)
 
         # AXIS2
         if '2' in keyws.keys():
             print('Generating catalog for axis'+list(keyws.keys())[1])
             ax2_pre_selection = {'Valid':'S', **pre_select, 'Line':keyws['2'][1]+'um'} if keyws['2'][1]+'um' in line_list  else {'Valid':'S', **pre_select}
             ax2_cat = self.pre_select(ax2_pre_selection)
-            ax2 = axis.axis(keyws['2'], ax2_cat, **kwargs)
-            ax2 = self.check_scale_ir(ax2)
+            if len(keyws['2']) < 3:
+                raise ValueError('An operator is needed for one of the axes. Check it tout.')
+            else:            
+                ax2 = axis.axis(keyws['2'], cat=ax2_cat, op=keyws['2'][2], **kwargs)
+                ax2 = self.check_scale(ax2)
             
-            print('Cross matching 1 and 2-axes')
-            cross_ids, ids = axis.cross_corr(ax.cat, ax2.cat, ax.keyws, ax2.keyws, r_cross=r_cross,  **kwargs)
-            ax.update(cross_ids)
-            ax2.update(ids)
-
-            ax = ax.operate(ax2, operator=keyws['2'][2])
+                print('Cross matching 1 and 2-axes')
+                cross_ids, ids = axis.cross_corr(ax.cat, ax2.cat, ax.keyws, ax2.keyws, r_cross=r_cross,  **kwargs)
+                ax.update(cross_ids)
+                ax2.update(ids)
+                
+                ax = ax.operate(ax2)
 
         return ax
 
@@ -210,14 +224,14 @@ class fslcat:
             
             if zkeyws is not None:
                 if isinstance(self.z.data[0], float):
-                    fig, axs = plt.subplots(figsize=(12.3, 8.5))
-                    plt.subplots_adjust(left=0.125, bottom=0.125, right=1.01, top=0.98)
+                    fig, axs = plt.subplots(figsize=(12.2, 8.5))
+                    plt.subplots_adjust(left=0.135, bottom=0.14, right=1.01, top=0.98)
                 else:
                     fig, axs = plt.subplots(figsize=(11., 8.5))
-                    plt.subplots_adjust(left=0.14, bottom=0.125, right=0.96, top=0.98)
+                    plt.subplots_adjust(left=0.145, bottom=0.14, right=0.96, top=0.98)
             else:
                 fig, axs = plt.subplots(figsize=(11., 8.5))
-                plt.subplots_adjust(left=0.14, bottom=0.125, right=0.96, top=0.98)
+                plt.subplots_adjust(left=0.145, bottom=0.14, right=0.96, top=0.98)
         
             axs.minorticks_on()
             for side in axs.spines.keys(): axs.spines[side].set_linewidth(2.0)
@@ -231,7 +245,7 @@ class fslcat:
             #axs.set_ylabel(r'y', fontsize=20)
             
             if xlims is None:
-                if self.x.keyws[0] == 'z': axs.set(xlim=[0.8, 15.], xscale='log')
+                if self.x.keyws['1'][0] == 'z': axs.set(xlim=[0.8, 15.], xscale='log')
                 else: axs.set(xlim=[np.nanmin(self.x.data)/2., np.nanmax(self.x.data)*2.], xscale='log')
             else:
                 axs.set(xlim=[xlims[0], xlims[1]], xscale=xlims[2])
@@ -265,6 +279,7 @@ class fslcat:
                     #colors = plt.cm.get_cmap('gist_rainbow_r')
                     #colors = plt.cm.get_cmap('Set1')
                     if zkeyws['1'][1] == 'Simplified':
+                        self.z.data[np.where(self.z.data == 'Dwarf')[0]] = 'MS/SFG'
                         self.z.data[np.where(self.z.data == 'Candidate')[0]] = 'MS/SFG'
                         #self.z.data[np.where(self.z.data == 'DLAHost')[0]] = 'DLAHost'
                         self.z.data[np.where(self.z.data == 'Hot-DOG')[0]] = 'QSO/AGN'
@@ -281,6 +296,7 @@ class fslcat:
                         self.z.data[np.where(self.z.data == 'SMG')[0]] = 'SB/SMG'
                         self.z.data[np.where(self.z.data == '[CII]-emitter')[0]] = 'ALMA-Sel'
                         self.z.data[np.where(self.z.data == 'PCM')[0]] = 'Cluster'
+                        self.z.data[np.where(self.z.data == 'SMG-candidate')[0]] = 'SB/SMG'
                         
                     labels, indices = np.unique(self.z.data, return_inverse=True)
                     for i in range(len(labels)):

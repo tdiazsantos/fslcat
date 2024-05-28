@@ -222,7 +222,7 @@ class axis:
         
         op = operator
         if op is None: op = axis2.op
-        if op is None: raise ValueError('An operator is needed')
+        if op is None: raise ValueError('An operator is needed for one of the axes. Check it out.')
 
         keyws = {'1':self.keyws, '2':axis2.keyws}
 
@@ -306,13 +306,18 @@ class axis:
                     label = r'f$\rm{_{'+self.keyws[1]+'}}$'
                     unit = r'[Jy km s$^{-1}$]'
                 elif self.keyws[0] == 'Lum':
-                    label = r'L$\rm{_{'+self.keyws[1]+'}}$'
-                    unit = r'[L$\rm{_\odot}$]'
+                    if len(self.keyws) == 3:
+                        if self.keyws[2] == 'Flux':
+                            label = r'f$\rm{^{rest}_{'+self.keyws[1]+'}}$'
+                            unit = r'[Jy km s$^{-1}$]'
+                    else:
+                        label = r'L$\rm{_{'+self.keyws[1]+'}}$'
+                        unit = r'[L$\rm{_\odot}$]'
                 elif self.keyws[0] == 'FWHM':
                     label = r'FWHM$\rm{_{'+self.keyws[1]+'}}$'
                     unit = r'[km s$^{-1}$]'
                 elif self.keyws[0] == 'Cont':
-                    label = r'Cont$\rm{_{'+self.keyws[1]+'}}$'
+                    label = r'Cont$\rm{^{rest}_{'+self.keyws[1]+'}}$'
                     unit = r'[mJy]'
             else:
                 raise ValueError('Line not found in list of lines')
