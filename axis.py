@@ -172,7 +172,7 @@ class axis:
         
         self.op = op
         self.get_label()
-        
+
 
 
     ##### Function that updates the axis data and catalog given an array of dataframe ids
@@ -306,13 +306,12 @@ class axis:
                     label = r'f$\rm{_{'+self.keyws[1]+'}}$'
                     unit = r'[Jy km s$^{-1}$]'
                 elif self.keyws[0] == 'Lum':
+                    label = r'L$\rm{_{'+self.keyws[1]+'}}$'
+                    unit = r'[L$\rm{_\odot}$]'
                     if len(self.keyws) == 3:
                         if self.keyws[2] == 'Flux':
                             label = r'f$\rm{^{rest}_{'+self.keyws[1]+'}}$'
                             unit = r'[Jy km s$^{-1}$]'
-                    else:
-                        label = r'L$\rm{_{'+self.keyws[1]+'}}$'
-                        unit = r'[L$\rm{_\odot}$]'
                 elif self.keyws[0] == 'FWHM':
                     label = r'FWHM$\rm{_{'+self.keyws[1]+'}}$'
                     unit = r'[km s$^{-1}$]'
@@ -321,9 +320,8 @@ class axis:
                     unit = r'[mJy]'
             else:
                 raise ValueError('Line not found in list of lines')
-
         self.label = [label, unit]
-
+        
 
 
     ##### Function that merges/combines the labels and units of two axes

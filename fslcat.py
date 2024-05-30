@@ -169,6 +169,9 @@ class fslcat:
                 ax2.update(ids)
                 
                 ax = ax.operate(ax2)
+        
+        else:
+            ax.keyws = {'1':ax.keyws}
 
         return ax
 
@@ -206,7 +209,6 @@ class fslcat:
             print('Updating z-axis')
             self.z.update(zids, self.x.cat)
         
-
         if self.z.data.size == 0:
             print('WARNING: There are no data given the prompted axes')
         else:
@@ -224,7 +226,7 @@ class fslcat:
             
             if zkeyws is not None:
                 if isinstance(self.z.data[0], float):
-                    fig, axs = plt.subplots(figsize=(12.2, 8.5))
+                    fig, axs = plt.subplots(figsize=(12.2, 8.5*12.2/11.))
                     plt.subplots_adjust(left=0.135, bottom=0.14, right=1.01, top=0.98)
                 else:
                     fig, axs = plt.subplots(figsize=(11., 8.5))
@@ -270,7 +272,7 @@ class fslcat:
                 # Plot the color
                 if isinstance(self.z.data[0], float):
                     colors = plt.cm.get_cmap('rainbow')
-                    vmin, vmax = [1., 15.] if self.z.keyws[0] == 'z' else [np.nanmin(self.z.data), np.nanmax(self.z.data)]
+                    vmin, vmax = [1., 15.] if self.z.keyws['1'][0] == 'z' else [np.nanmin(self.z.data), np.nanmax(self.z.data)]
                     if vmax/vmin > 10:
                         sc = plt.scatter(self.x.data, self.y.data, c=self.z.data, cmap=colors, alpha=0.9, marker='o', s=15**2, edgecolors='black', linewidth=1., norm=mpl.colors.LogNorm(vmin=vmin, vmax=vmax))
                     else:
