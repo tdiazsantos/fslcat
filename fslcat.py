@@ -95,47 +95,11 @@ class fslcat:
                 ax.data *= 961.54 / ax.cat['LDist'].values**2 / (ax.cat['Line_rf'].values / (1+ax.cat['z'].values)) / (1+ax.cat['z'].values)  # Sdv = L * 961.54 / DL^2 / nu_obs
                 ax.err *= 961.54 / ax.cat['LDist'].values**2 / (ax.cat['Line_rf'].values / (1+ax.cat['z'].values)) / (1+ax.cat['z'].values)
 
+        if 'MagCorr' in ax.keyws:
+            ax.data /= (ax.cat['Mag_min'].values + ax.cat['Mag_max'].values)/2
+            ax.err /= (ax.cat['Mag_min'].values + ax.cat['Mag_max'].values)/2
 
         return ax
-
-
-
-    def write_table(self, xax, xkeyws, yax, ykeyws, zax, zkeyws, plotname):
-
-        tbl = Table()
-        
-        tbl['Source'] = xax.cat['Source']
-        tbl['RA'] = xax.cat['RA']
-        tbl['Dec'] = xax.cat['Dec']
-        tbl['z'] = xax.cat['z']
-        tbl['LDist'] = xax.cat['LDist']
-        tbl['Instrument'] = xax.cat['Instrument']
-        xhead = [''.join(val) for key, val in xkeyws.items()][0]
-        tbl[xhead] = xax.data
-        tbl[xhead+'_err'] = xax.err
-        tbl[xhead+'_lim'] = xax.lim
-        yhead = [''.join(val) for key, val in ykeyws.items()][0]
-        tbl[yhead] = yax.data
-        tbl[yhead+'_err'] = yax.err
-        tbl[yhead+'_lim'] = yax.lim
-        if zax is not None:
-            zhead = [''.join(val) for key, val in zkeyws.items()][0]
-            tbl[zhead] = zax.data
-            tbl[zhead+'_err'] = zax.err
-            tbl[zhead+'_lim'] = zax.lim
-
-            if isinstance(zax.data[0], float):
-                ascii.write(tbl, plotname+'.ecsv', overwrite=True, format='fixed_width', delimiter='', formats={'Source':'%s', 'RA':'%s', 'Dec':'%s', 'z':'%.4f', 'LDist':'%.1f',
-                                                                                                                xhead:'%.2e', xhead+'_err':'%.2e', xhead+'_lim':'%.0f', yhead:'%.2e', yhead+'_err':'%.2e', yhead+'_lim':'%.0f',
-                                                                                                                zhead:'%.2e', zhead+'_err':'%.2e', zhead+'_lim':'%.0f'})
-            else:
-                ascii.write(tbl, plotname+'.ecsv', overwrite=True, format='fixed_width', delimiter='', formats={'Source':'%s', 'RA':'%s', 'Dec':'%s', 'z':'%.4f', 'LDist':'%.1f',
-                                                                                                                xhead:'%.2e', xhead+'_err':'%.2e', xhead+'_lim':'%.0f', yhead:'%.2e', yhead+'_err':'%.2e', yhead+'_lim':'%.0f',
-                                                                                                                zhead:'%s', zhead+'_err':'%s', zhead+'_lim':'%s'})
-                
-        else:
-            ascii.write(tbl, plotname+'.ecsv', overwrite=True, formats={'Source':'%s', 'RA':'%s', 'Dec':'%s', 'z':'%.4f', 'LDist':'%.1f',
-                                                                        xhead:'%.2e', xhead+'_err':'%.2e', xhead+'_lim':'%.0f', yhead:'%.2e', yhead+'_err':'%.2e', yhead+'_lim':'%.0f'})
 
 
 
@@ -151,14 +115,14 @@ class fslcat:
         # Build the data dictionary of the axis
         ax = axis.axis(keyws['1'], cat=ax_cat, **kwargs)
         ax = self.check_scale(ax)
-
+        
         # AXIS2
         if '2' in keyws.keys():
             print('Generating catalog for axis'+list(keyws.keys())[1])
             ax2_pre_selection = {'Valid':'S', **pre_select, 'Line':keyws['2'][1]+'um'} if keyws['2'][1]+'um' in line_list  else {'Valid':'S', **pre_select}
             ax2_cat = self.pre_select(ax2_pre_selection)
             if len(keyws['2']) < 3:
-                raise ValueError('An operator is needed for one of the axes. Check it tout.')
+                raise ValueError('An operator is needed for one of the axes. Check it out.')
             else:            
                 ax2 = axis.axis(keyws['2'], cat=ax2_cat, op=keyws['2'][2], **kwargs)
                 ax2 = self.check_scale(ax2)
@@ -176,6 +140,52 @@ class fslcat:
         return ax
 
     
+
+    def write_table(self, xax, xkeyws, yax, ykeyws, zax, zkeyws, stdata, plotname):
+
+        tbl = Table()
+        
+        tbl['Source'] = xax.cat['Source']
+        tbl['RA'] = xax.cat['RA']
+        tbl['Dec'] = xax.cat['Dec']
+        tbl['Redshift'] = xax.cat['z']
+        tbl['LDist'] = xax.cat['LDist']
+        tbl['Instrument'] = xax.cat['Instrument']
+        xhead = [''.join(val) for key, val in xkeyws.items()][0]
+        tbl[xhead] = xax.data
+        tbl[xhead+'_err'] = xax.err
+        tbl[xhead+'_lim'] = xax.lim
+        yhead = [''.join(val) for key, val in ykeyws.items()][0]
+        tbl[yhead] = yax.data
+        tbl[yhead+'_err'] = yax.err
+        tbl[yhead+'_lim'] = yax.lim
+        if zax is not None:
+            zhead = [''.join(val) for key, val in zkeyws.items()][0]
+            tbl[zhead] = zax.data
+            tbl[zhead+'_err'] = zax.err
+            tbl[zhead+'_lim'] = zax.lim
+
+            sthead = 'SourceType'
+            tbl[sthead] = stdata
+
+            if isinstance(zax.data[0], float):
+                ascii.write(tbl, plotname+'.ecsv', overwrite=True, format='fixed_width', delimiter='', formats={'Source':'%s', 'RA':'%s', 'Dec':'%s', 'Redshift':'%f', 'LDist':'%.1f',
+                                                                                                                xhead:'%.3e', xhead+'_err':'%.3e', xhead+'_lim':'%.0f', yhead:'%.3e', yhead+'_err':'%.3e', yhead+'_lim':'%.0f',
+                                                                                                                zhead:'%.3e', zhead+'_err':'%.3e', zhead+'_lim':'%.0f', sthead:'%s'})
+            else:
+                ascii.write(tbl, plotname+'.ecsv', overwrite=True, format='fixed_width', delimiter='', formats={'Source':'%s', 'RA':'%s', 'Dec':'%s', 'Redshift':'%f', 'LDist':'%.1f',
+                                                                                                                xhead:'%.3e', xhead+'_err':'%.3e', xhead+'_lim':'%.0f', yhead:'%.3e', yhead+'_err':'%.3e', yhead+'_lim':'%.0f',
+                                                                                                                zhead:'%s', zhead+'_err':'%s', zhead+'_lim':'%s', sthead:'%s'})
+                
+        else:
+            sthead = 'SourceType'
+            tbl[sthead] = stdata
+
+            ascii.write(tbl, plotname+'.ecsv', overwrite=True, formats={'Source':'%s', 'RA':'%s', 'Dec':'%s', 'Redshift':'%f', 'LDist':'%.1f',
+                                                                        xhead:'%.3e', xhead+'_err':'%.3e', xhead+'_lim':'%.0f', yhead:'%.3e', yhead+'_err':'%.3e', yhead+'_lim':'%.0f', sthead:'%s'})
+
+
+
 
     def plot(self, xkeyws={'1':['', 'LFIR']}, ykeyws={'1':['[CII]158', 'Lum'], '2':['','LFIR','/']}, zkeyws=None, pre_select={}, outdir='./figures/', r_cross=0.01, color='red', xlims=None, ylims=None, **kwargs):
         """
@@ -209,8 +219,10 @@ class fslcat:
             print('Updating z-axis')
             self.z.update(zids, self.x.cat)
         
+        if np.isnan(self.x.data).all() or np.isnan(self.y.data).all(): sys.exit()
+
         if self.z.data.size == 0:
-            print('WARNING: There are no data given the prompted axes')
+            print('WARNING: There are no data given the requested z-axis')
         else:
             
             # Set up axes
@@ -220,17 +232,18 @@ class fslcat:
             pdfname = mpl.backends.backend_pdf.PdfPages(plotname+'.pdf')
             
             # Write data table
-            self.write_table(self.x, xkeyws, self.y, ykeyws, self.z, zkeyws, plotname)
+            sourcetypes = self.x.cat['Type'].values
+            self.write_table(self.x, xkeyws, self.y, ykeyws, self.z, zkeyws, sourcetypes, plotname)
             
             #nicePlot.nicePlot()
             
             if zkeyws is not None:
                 if isinstance(self.z.data[0], float):
                     fig, axs = plt.subplots(figsize=(12.2, 8.5*12.2/11.))
-                    plt.subplots_adjust(left=0.135, bottom=0.14, right=1.01, top=0.98)
+                    plt.subplots_adjust(left=0.135, bottom=0.14, right=1.0, top=0.98)
                 else:
                     fig, axs = plt.subplots(figsize=(11., 8.5))
-                    plt.subplots_adjust(left=0.145, bottom=0.14, right=0.96, top=0.98)
+                    plt.subplots_adjust(left=0.145, bottom=0.14, right=0.98, top=0.98)
             else:
                 fig, axs = plt.subplots(figsize=(11., 8.5))
                 plt.subplots_adjust(left=0.145, bottom=0.14, right=0.96, top=0.98)

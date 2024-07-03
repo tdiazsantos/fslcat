@@ -74,7 +74,7 @@ def self_cross_corr(cat, axis_keyws, r_cross):
 
 
 ##### Function that performs a cross match between two catalogs
-def cross_corr(cat1, cat2, axis1_list, axis2_list, r_cross, keep_all=False):
+def cross_corr(cat1, cat2, axis1_list, axis2_list, r_cross, keep_all=False, verbose=True):
     
     ids = []
     cross_ids = []
@@ -108,8 +108,8 @@ def cross_corr(cat1, cat2, axis1_list, axis2_list, r_cross, keep_all=False):
             v_ids = np.where(np.isnan(tmpcat2.iloc[idxcat][axis2_keyws[0]]).values == False)[0]
             cross_ids.append(tmpcat2.index.values[idxcat[v_ids[np.nanargmax(tmpcat2.iloc[idxcat[v_ids]]['Line_year'])]]])
         
-    print('Out of', len(cat1), 'entries in the', axis1_list, 'catalog(s),', len(cross_ids), 'independent cross-matches were found in the', axis2_list, 'catalog(s) containing', len(cat2), 'entries')
-    if keep_all == True: print('Because keep_all=True, the cross-match kept all', len(cross_ids), 'entries of', axis1_list, 'catalog(s), although', np.count_nonzero(~np.isnan(cross_ids)), 'were actually found in the', axis2_list, 'catalog(s)')
+    if verbose == True: print('Out of', len(cat1), 'entries in the', axis1_list, 'catalog(s),', len(cross_ids), 'independent cross-matches were found in the', axis2_list, 'catalog(s) containing', len(cat2), 'entries')
+    if keep_all == True and verbose == True: print('Because keep_all=True, the cross-match kept all', len(cross_ids), 'entries of', axis1_list, 'catalog(s), although', np.count_nonzero(~np.isnan(cross_ids)), 'were actually found in the', axis2_list, 'catalog(s)')
 
     # Return the dataframe ids (cat1) and cross_ids (cat2)
     return np.array(ids), np.array(cross_ids)
@@ -320,6 +320,9 @@ class axis:
                     unit = r'[mJy]'
             else:
                 raise ValueError('Line not found in list of lines')
+        
+        if 'MagCorr' in self.keyws: label = label+r'$\rm{^{MagCorr}}$'
+
         self.label = [label, unit]
         
 
