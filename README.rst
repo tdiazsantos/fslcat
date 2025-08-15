@@ -70,9 +70,15 @@ In addition to the plot, ``fslcat`` will also output the trimmed sub-sample of t
 
 Usage in iPython
 ------------
+Run the python code:
+
 > ``run fslcat.py``
 
+Load the catalog:
+
 > ``cat = fslcat('/fslcat_directory/FSL_catalog_v4.csv')``
+
+A few plot examples:
 
 * A plot of [CII]158 luminosity over the far-infrared luminosity as a function of the far-infrared luminosity (corrected for magnification), color-coded as a function of galaxy type:
 
@@ -82,9 +88,9 @@ Usage in iPython
 
 > ``cat.plot(xkeyws={'1':['Lum', '[CII]158'], '2':['LFIR_LIR', '', '/']}, ykeyws={'1':['Lum', '[CII]158'], '2':['Lum', '[CI]609', '/']}, zkeyws={'1':['z', '']})``
 
-* A plot of the [CII]158/[CI]609 line ratio as a function of the [CII]158 FWHM, color-coded as a function of redshift, showing galaxies only at z >= 6:
+* A plot of the [CII]158/[CI]609 line ratio as a function of the [CII]158 FWHM, color-coded as a function of redshift, only showing galaxies at z >= 6 that have been observed with ALMA:
 
-> ``cat.plot(xkeyws={'1':['FWHM', '[CII]158']}, ykeyws={'1':['Lum', '[CII]158'], '2':['Lum', '[CI]370', '/']}, zkeyws={'1':['z', '']}, pre_select={'z':[6,np.inf]})``
+> ``cat.plot(xkeyws={'1':['FWHM', '[CII]158']}, ykeyws={'1':['Lum', '[CII]158'], '2':['Lum', '[CI]370', '/']}, zkeyws={'1':['z', '']}, pre_select={'z':[6,np.inf], 'Instrument':'ALMA'})``
 
 Requirements
 ~~~~~~~~~
