@@ -1,4 +1,4 @@
-**FSLCAT: A catalog of fine-structure lines and tools for handling and plotting the data**
+**FSLCAT: A catalog of fine-structure lines and tools for handling and plotting the dataset**
 ============
 
 Purpose and content
