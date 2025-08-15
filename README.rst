@@ -1,4 +1,4 @@
-**FSLCAT: A catalog of fine-structure lines of galaxies at z > 1, and tools for handling and plotting the dataset**
+**FSLCAT: A catalog of fine-structure lines of galaxies at z > 1, and tools for handling and plotting the data**
 ============
 
 Purpose and content
