@@ -94,7 +94,7 @@ A few plot examples:
 
 Requirements
 ~~~~~~~~~
-``scipy``, ``astropy``, ``numpy``, ``pandas``, ``importlib``, ``math``, and ``matplotlib``
+``scipy``, ``astropy``, ``numpy``, ``pandas``, ``importlib``, ``math``, ``matplotlib``
 
 Referencing
 -----------
