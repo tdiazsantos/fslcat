@@ -1,22 +1,11 @@
-# fslcat
-A tool for handling and plotting data from the FSL catalog compiled by Decarli &amp; Diaz-Santos 2024
+**FSLCAT: A catalog of fine-structure lines and tools for handling and plotting the data**
+============
 
-# Usage in iPython
-
-run fslcat.py
-
-cat = fslcat('/fslcat_directory/FSL_catalog_z_1_20230825.csv')
-
-cat.plot(xkeyws={'1':['', 'LFIR_LIR']}, ykeyws={'1':['[CII]158', 'Lum'], '2':['','LFIR_LIR','/']}, zkeyws={'1':['[OIII]88', 'Lum']})
-
-
-Fine Structure Line Catalog and Plotting Tools
-====
-
-# Purpose and content
+Purpose and content
+-----------
 
 The catalog
--------
+~~~~~~~~~~~
 This repository contains the catalog of sources used to generate the figures included in the review paper entitled "Infrared fine-structure lines at high redshift" by Decarli and Diaz-Santos 2025 published on The Astronomy and Astrophysics Review (A&ARv) by Springer Nature. The data in the catalog is, to the best of the authors' knowledge, a complete collection of all observations carried out by infrared telescope facilities of far-infrared fine-structure emission lines from galaxies at redshifts larger than 1. The catalog contains 1550 entries, with more than 500 individual sources that have been observed in one emission line at least once.
 
 The catalog can be downloaded from XXX and contain the following information:
@@ -30,12 +19,13 @@ The catalog can be downloaded from XXX and contain the following information:
 * Column (7): Cosmology used to calculate the luminosity distance
 * Column (8): Luminosity distance, in [Mpc]
 * Column (9): Homogenized source type as extracted from the literature search
-  - quasars and AGN from various classification techniques
-  - sub-mm galaxies and starbursts, mostly selected via their luminous dust continuum emission in the infrared wavelengths
-  - main sequence and more `typical' star-forming galaxies
-  - optically--selected galaxies (primarily Lyman Break Galaxies and Ly$\alpha$ emitters)
-  - line emitters identified with interferometric observations
-  - cluster members of diverse type
+
+   - quasars and AGN from various classification techniques
+   - sub-mm galaxies and starbursts, mostly selected via their luminous dust continuum emission in the infrared wavelengths
+   - main sequence and more `typical' star-forming galaxies
+   - optically--selected galaxies (primarily Lyman Break Galaxies and Ly$\alpha$ emitters)
+   - line emitters identified with interferometric observations
+   - cluster members of diverse type
 * Column (10): Instrument that carried out the observation
 * Column (11): Emission line name
 * Column (12): Line flux, in [Jy km/s]
@@ -68,28 +58,47 @@ The catalog can be downloaded from XXX and contain the following information:
 * Column (39): Lower uncertainty of the logarithm of the emission line luminosity
 * Column (40): Upper uncertainty of the logarithm of the emission line luminosity
 
-Documentation
--------------
-Hosted by readthedocs: <https://goals-cafe.readthedocs.io/en/latest/>
+The tool
+~~~~~~~~~
+The ``fslcat`` python tool uses the master catalog described above to make scatter plots using the available data. The user can plot the entire catalog or a specific sub-sample by selecting sources based on conditions applied to any of the quantities.
+
+To make plots, the user needs to specify the axes they want to visualize via keyword arguments using the syntaxis described below. Scatter plots can be simple (quantity A vs. quantity B) but also more complex. For instance, ``fslcat`` is capable of adding, subtracting, multiplicating or dividing quantities and plotting them in any axis. It also can color-code the data according to a third, simple or complex quantity. ``fslcat`` will automatically cross-correlate the data available for each dataset/column and trim the entries, selecting only the most updated (latest published) value of the quantities to be plotted.
+
+Labels, color-bars, axes and legends are generated automatically. Uncertainties, as well as upper and lower limits of simple or complex quantities are also propagated and calculated automatically.
+
+In addition to the plot, ``fslcat`` will also output the trimmed sub-sample of the catalog used to generate the figure. This is useful, independently of the plot, to extract and create sub-catalogs based on conditions applied to any of the quantities.
+
+Usage in iPython
+------------
+> ``run fslcat.py``
+
+> ``cat = fslcat('/fslcat_directory/FSL_catalog_v4.csv')``
+
+* A plot of [CII]158 luminosity over the far-infrared luminosity as a function of the far-infrared luminosity (corrected for magnification), color-coded as a function of galaxy type:
+
+> ``cat.plot(xkeyws={'1':['LFIR_LIR', 'MagCorr']}, ykeyws={'1':['Lum', '[CII]158'], '2':['LFIR_LIR', '', '/']}, zkeyws={'1':['Type', 'Simplified']})``
+
+* A plot of the [CII]158/[CI]609 line ratio as a function of the [CII]158/LFIR ratio, color-coded as a function of redshift:
+
+> ``cat.plot(xkeyws={'1':['Lum', '[CII]158'], '2':['LFIR_LIR', '', '/']}, ykeyws={'1':['Lum', '[CII]158'], '2':['Lum', '[CI]609', '/']}, zkeyws={'1':['z', '']})``
+
+* A plot of the [CII]158/[CI]609 line ratio as a function of the [CII]158 FWHM, color-coded as a function of redshift, showing galaxies only at z >= 6:
+
+> ``cat.plot(xkeyws={'1':['FWHM', '[CII]158']}, ykeyws={'1':['Lum', '[CII]158'], '2':['Lum', '[CI]370', '/']}, zkeyws={'1':['z', '']}, pre_select={'z':[6,np.inf]})``
+
+Requirements
+~~~~~~~~~
+``scipy``, ``astropy``, ``numpy``, ``pandas``, ``importlib``, ``math``, and ``matplotlib``
 
 Referencing
 -----------
 If you use ``fslcat`` to make plots of the catalog or generate tables, please reference it as *Diaz-Santos et al. (2025)* (see bibcode below) and add a link to the GitHub repository: https://github.com/tdiazsantos/fslcat
 
 Contributors
-------------
+~~~~~~~~~~
 * Tanio Diaz-Santos
 * Roberto Decarli
 
 Bibcode
--------
-| @software{2025ascl.soft01001D,
-| author = {{Diaz-Santos}, Tanio and {Lai}, Thomas S. -Y. and {Finnerty}, Luke and {Privon}, George and {Bonfini}, Paolo and {Larson}, Kirsten and {Marshall}, Jason and {Armus}, Lee and {Charmandaris}, Vassilis}, \
-| title = "{CAFE: Continuum And Feature Extraction tool}",
-| howpublished = {Astrophysics Source Code Library, record ascl:2501.001},
-| year = 2025,
-| month = jan,
-| eid = {ascl:2501.001},
-| adsurl = {https://ui.adsabs.harvard.edu/abs/2025ascl.soft01001D},
-| adsnote = {Provided by the SAO/NASA Astrophysics Data System}
-}
+~~~~~~~~~
+TBD
