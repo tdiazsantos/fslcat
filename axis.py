@@ -12,12 +12,13 @@ from arrayop import arrayop
 data_dict = {'lines':['[OIII]52um', '[NIII]57um', '[OI]63um', '[OIII]88um', '[NII]122um','[CII]158um', '[OI]146um', '[NII]205um', '[CI]370um', '[CI]609um'],
              'types':['MS/SFG','SB/SMG','QSO/AGN','Opt-Sel','ALMA-Sel','Cluster','DLAHost']}
 
-color_dict = {'lines':['skyblue',   'magenta',    'steelblue', 'dodgerblue', 'palegreen', 'crimson',      'royalblue',  'limegreen',      'coral', 'orange'],
-              'types':['forestgreen','red','blue','deepskyblue','darkorchid','darkorange','brown']}
+color_dict = {'lines':['skyblue',   'magenta',    'steelblue', 'dodgerblue', 'palegreen', 'crimson',    'royalblue',  'limegreen',     'coral', 'orange'],
+              #'types':['forestgreen','red','blue','deepskyblue','darkorchid','darkorange','brown']}
+              'types':['palegreen','lightcoral','mediumslateblue','deepskyblue','gold','darkorange','grey']}
 
 
 ##### Function that performs a self cross match within a catalog, removing duplicates and returning (the dataframe entries of) individual sources
-def self_cross_corr(cat, axis_keyws, r_cross):
+def self_cross_corr(cat, axis_keyws, r_cross, newest=True):
     
     cross_ids = []
     tmpcat = cat.copy()
@@ -54,10 +55,14 @@ def self_cross_corr(cat, axis_keyws, r_cross):
             # Find valid Ids
             if isinstance(tmpcat.iloc[0][axis_keyws[0]], float):
                 v_ids = np.where(np.isnan(tmpcat.iloc[idxcat][axis_keyws[0]]).values == False)[0]
-                # Select the most recent value from valid cross_ids
             else:
                 v_ids = np.where(tmpcat.iloc[idxcat][axis_keyws[0]] != '')[0]
-            cross_ids.append(tmpcat.index.values[idxcat[v_ids[np.nanargmax(tmpcat.iloc[idxcat[v_ids]]['Line_year'])]]])
+            if newest == True:
+                # Select the most recent value from valid cross_ids
+                cross_ids.append(tmpcat.index.values[idxcat[v_ids[np.nanargmax(tmpcat.iloc[idxcat[v_ids]]['Line_year'])]]])
+            else:
+                # or the oldest
+                cross_ids.append(tmpcat.index.values[idxcat[v_ids[np.nanargmin(tmpcat.iloc[idxcat[v_ids]]['Line_year'])]]])
             #if np.isnan(tmpcat.loc[cross_ids[-1]][axis_keyws[0]]): ipdb.set_trace()
         else:
             raise ValueError('No entries were found, which is impossible')
@@ -74,7 +79,7 @@ def self_cross_corr(cat, axis_keyws, r_cross):
 
 
 ##### Function that performs a cross match between two catalogs
-def cross_corr(cat1, cat2, axis1_list, axis2_list, r_cross, keep_all=False, verbose=True):
+def cross_corr(cat1, cat2, axis1_list, axis2_list, r_cross, newest=True, keep_all=False, verbose=True):
     
     ids = []
     cross_ids = []
@@ -103,22 +108,26 @@ def cross_corr(cat1, cat2, axis1_list, axis2_list, r_cross, keep_all=False, verb
             ids.append(tmpcat1.index.values[i])
             cross_ids.append(tmpcat2.index.values[idxcat[0]])
         else:
-            # Select the most recent value from valid cross_ids
             ids.append(tmpcat1.index.values[i])
             v_ids = np.where(np.isnan(tmpcat2.iloc[idxcat][axis2_keyws[0]]).values == False)[0]
-            cross_ids.append(tmpcat2.index.values[idxcat[v_ids[np.nanargmax(tmpcat2.iloc[idxcat[v_ids]]['Line_year'])]]])
-        
+            if newest == True:
+                # Select the most recent value from valid cross_ids
+                cross_ids.append(tmpcat2.index.values[idxcat[v_ids[np.nanargmax(tmpcat2.iloc[idxcat[v_ids]]['Line_year'])]]])
+            else:
+                # or the oldest
+                cross_ids.append(tmpcat2.index.values[idxcat[v_ids[np.nanargmin(tmpcat2.iloc[idxcat[v_ids]]['Line_year'])]]])
+
     if verbose == True: print('Out of', len(cat1), 'entries in the', axis1_list, 'catalog(s),', len(cross_ids), 'independent cross-matches were found in the', axis2_list, 'catalog(s) containing', len(cat2), 'entries')
     if keep_all == True and verbose == True: print('Because keep_all=True, the cross-match kept all', len(cross_ids), 'entries of', axis1_list, 'catalog(s), although', np.count_nonzero(~np.isnan(cross_ids)), 'were actually found in the', axis2_list, 'catalog(s)')
 
     # Return the dataframe ids (cat1) and cross_ids (cat2)
     return np.array(ids), np.array(cross_ids)
-        
+
 
 
 class axis:
 
-    def __init__(self, axis_keyws, cat=None, cross_match=True, r_cross=0.01, data=None, err=None, lim=None, op=None, name=''):
+    def __init__(self, axis_keyws, cat=None, cross_match=True, r_cross=0.01, newest=True, data=None, err=None, lim=None, op=None, name=''):
 
         self.keyws = axis_keyws
         self.name = name
@@ -126,7 +135,7 @@ class axis:
         if cat is not None:
             # If we want to do a self cross match to generate a catalog of unique sources
             if cross_match == True:
-                cross_ids = self_cross_corr(cat, axis_keyws, r_cross)
+                cross_ids = self_cross_corr(cat, axis_keyws, r_cross, newest=newest)
                 self.cross_ids = cross_ids
                 
                 data = cat.loc[cross_ids][axis_keyws[0]].values
@@ -233,25 +242,29 @@ class axis:
             
         # These if/elses handle the limits
         if op == '+' or op == '*' or op == 'ave' or op == '+^2':
-            nullinds = np.where((np.isnan(err)) & (((lim == 0.) & (self.lim != axis2.lim)) | (np.isnan(lim))))[0]
-            data[nullinds] = np.nan
-            lim[nullinds] = np.nan
+            # -1 + +1 or +1 + -1
+            indefinds = np.where((np.isnan(err)) & (((lim == 0.) & (self.lim != axis2.lim)) | (np.isnan(lim))))[0]
+            data[indefinds] = np.nan
+            lim[indefinds] = np.nan
+            # -1 + -1 or +1 + +1
             liminds = np.where((np.isnan(err)) & ((lim != 0.) & (np.isnan(lim) == False)))[0]
             lim[liminds] = lim[liminds]/abs(lim[liminds])
 
         elif op == '-' or op == '/' or op == '-^2' or op == '/^2':
+            # -1 - +1 or +1 - -1
             liminds = np.where((np.isnan(err)) & (lim == 0.))[0]
             lim[liminds] = self.lim[liminds]
-            nullinds = np.where((np.isnan(err)) & ((lim != 0.) | (np.isnan(lim))) & (self.lim == axis2.lim))[0]
-            data[nullinds] = np.nan
-            lim[nullinds] = np.nan
-            invinds = np.where((self.lim == 0.) & (axis2.lim == 0.))[0]
+            # -1 - -1 or +1 - +1
+            indefinds = np.where((np.isnan(err)) & ((lim != 0.) | (np.isnan(lim))) & (self.lim == axis2.lim))[0]
+            data[indefinds] = np.nan
+            lim[indefinds] = np.nan
+            invinds = np.where((self.lim == 0.) & (axis2.lim != 0.))[0]
             lim[invinds] = -1. * lim[invinds]
             
             if op == '-' and nanneg == True:
-                nullinds = np.where(data <= 0.)[0]
-                data[nullinds] = np.nan
-                err[nullinds] = np.nan
+                indefinds = np.where(data <= 0.)[0]
+                data[indefinds] = np.nan
+                err[indefinds] = np.nan
 
         else:
             raise ValueError('Operator not found')
@@ -308,7 +321,7 @@ class axis:
                 elif self.keyws[0] == 'Lum':
                     label = r'L$\rm{_{'+self.keyws[1]+'}}$'
                     unit = r'[L$\rm{_\odot}$]'
-                    if len(self.keyws) == 3:
+                    if len(self.keyws) >= 3:
                         if self.keyws[2] == 'Flux':
                             label = r'f$\rm{^{rest}_{'+self.keyws[1]+'}}$'
                             unit = r'[Jy km s$^{-1}$]'
@@ -379,3 +392,25 @@ class axis:
 
         return [color_dict[lab][k] for k in color_ind]
 
+
+
+    def simplify_type(self):
+
+        self.data[np.where(self.data == 'Dwarf')[0]] = 'MS/SFG'
+        self.data[np.where(self.data == 'Candidate')[0]] = 'MS/SFG'
+        #self.data[np.where(self.data == 'DLAHost')[0]] = 'DLAHost'
+        self.data[np.where(self.data == 'Hot-DOG')[0]] = 'QSO/AGN'
+        self.data[np.where(self.data == 'LAB')[0]] = 'Opt-Sel'
+        self.data[np.where(self.data == 'LAE')[0]] = 'Opt-Sel'
+        self.data[np.where(self.data == 'LBG')[0]] = 'Opt-Sel'
+        self.data[np.where(self.data == 'MS')[0]] = 'MS/SFG'
+        self.data[np.where(self.data == 'QSO')[0]] = 'QSO/AGN'
+        self.data[np.where(self.data == 'AGN')[0]] = 'QSO/AGN'
+        #self.data[np.where(self.data == 'Quiescent')[0]] = 'QSC'
+        self.data[np.where(self.data == 'SB')[0]] = 'SB/SMG'
+        self.data[np.where(self.data == 'SFG')[0]] = 'MS/SFG'
+        self.data[np.where(self.data == 'DSFG')[0]] = 'MS/SFG'
+        self.data[np.where(self.data == 'SMG')[0]] = 'SB/SMG'
+        self.data[np.where(self.data == '[CII]-emitter')[0]] = 'ALMA-Sel'
+        self.data[np.where(self.data == 'PCM')[0]] = 'Cluster'
+        self.data[np.where(self.data == 'SMG-candidate')[0]] = 'SB/SMG'

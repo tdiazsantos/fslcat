@@ -6,6 +6,7 @@ import numpy as np
 import numpy.ma as ma
 import pandas as pd
 import importlib as impl
+import math
 
 import scipy.ndimage
 from scipy import stats
@@ -18,13 +19,14 @@ from astropy.table import Table
 
 from astropy.cosmology import FlatLambdaCDM
 
-import matplotlib as mpl, matplotlib.backends.backend_pdf, matplotlib.pyplot as plt, matplotlib.cm as cm
+import matplotlib as mpl, matplotlib.backends.backend_pdf, matplotlib.pyplot as plt, matplotlib.cm as cm, matplotlib.patheffects as PathEffects
 from matplotlib.colors import Normalize, LogNorm
 
 #import nicePlot
 #imp.reload(nicePlot)
-import axis
+import axis, linfit
 impl.reload(axis)
+impl.reload(linfit)
 
 
 line_list = ['[OIII]52um', '[NIII]57um', '[OI]63um', '[OIII]88um', '[NII]122um','[CII]158um', '[OI]146um', '[NII]205um', '[CI]370um', '[CI]609um']
@@ -43,17 +45,26 @@ class fslcat:
 
 
 
-    def get_filename(self, xkeyws, ykeyws, zkeyws=None):
+    def get_filename(self, xkeyws, ykeyws, zkeyws=None, pre_select={}):
         
-        plotname = ''.join(ykeyws['1'][0:2])
-        if '2' in ykeyws.keys(): plotname += '-'+''.join(ykeyws['2'][0:2])
+        plotname = ''.join(ykeyws['1'])
+        if '2' in ykeyws.keys(): plotname += '-'+''.join(ykeyws['2'])
         plotname += '_vs_'        
-        plotname += ''.join(xkeyws['1'][0:2])
-        if '2' in xkeyws.keys(): plotname += '-'+''.join(xkeyws['2'][0:2])
+        plotname += ''.join(xkeyws['1'])
+        if '2' in xkeyws.keys(): plotname += '-'+''.join(xkeyws['2'])
         if zkeyws != None:
             plotname += '_sort_'        
-            plotname += ''.join(zkeyws['1'][0:2])
-            if '2' in zkeyws.keys(): plotname += '-'+''.join(zkeyws['2'][0:2])
+            plotname += ''.join(zkeyws['1'])
+            if '2' in zkeyws.keys(): plotname += '-'+''.join(zkeyws['2'])
+        if pre_select != {}:
+            plotname += '_presel_'
+            presel_items = list(pre_select.items())[0]
+            plotname += ''.join(presel_items[0])
+            plotname += ''.join(str(presel_items[1][0]))
+            if presel_items[0] == 'z':
+                plotname += '-'+''.join(str(presel_items[1][1]))                
+
+        plotname = plotname.replace('/','')
 
         return plotname
 
@@ -90,9 +101,9 @@ class fslcat:
             ax.err /= (1+ax.cat['z'].values)
         
         # The Flux, when obtained from the Luminosity, is transformed to rest-frame
-        if len(ax.keyws) == 3:
+        if len(ax.keyws) >= 3:
             if ax.keyws[0] == 'Lum' and ax.keyws[2] == 'Flux':
-                ax.data *= 961.54 / ax.cat['LDist'].values**2 / (ax.cat['Line_rf'].values / (1+ax.cat['z'].values)) / (1+ax.cat['z'].values)  # Sdv = L * 961.54 / DL^2 / nu_obs
+                ax.data *= 961.54 / ax.cat['LDist'].values**2 / (ax.cat['Line_rf'].values / (1+ax.cat['z'].values)) / (1+ax.cat['z'].values)  # Sdv = L * 961.54 / DL^2 / nu_obs, then / nu_obs to go to Sdv_restf
                 ax.err *= 961.54 / ax.cat['LDist'].values**2 / (ax.cat['Line_rf'].values / (1+ax.cat['z'].values)) / (1+ax.cat['z'].values)
 
         if 'MagCorr' in ax.keyws:
@@ -103,8 +114,8 @@ class fslcat:
 
 
 
-    def generate_axis(self, keyws, pre_select, r_cross, **kwargs):
-
+    def generate_axis(self, keyws, pre_select, r_cross, newest, **kwargs):
+        
         if '[' in keyws['1'][1] and keyws['1'][1]+'um' not in line_list: raise ValueError('Emission line not available in the catalog')
 
         # AXIS1
@@ -113,7 +124,7 @@ class fslcat:
         # Select on the line, if any, and on other properties, if any
         ax_cat = self.pre_select(ax_pre_selection)
         # Build the data dictionary of the axis
-        ax = axis.axis(keyws['1'], cat=ax_cat, **kwargs)
+        ax = axis.axis(keyws['1'], cat=ax_cat, newest=newest, **kwargs)
         ax = self.check_scale(ax)
         
         # AXIS2
@@ -124,11 +135,11 @@ class fslcat:
             if len(keyws['2']) < 3:
                 raise ValueError('An operator is needed for one of the axes. Check it out.')
             else:            
-                ax2 = axis.axis(keyws['2'], cat=ax2_cat, op=keyws['2'][2], **kwargs)
+                ax2 = axis.axis(keyws['2'], cat=ax2_cat, newest=newest, op=keyws['2'][2], **kwargs)
                 ax2 = self.check_scale(ax2)
             
                 print('Cross matching 1 and 2-axes')
-                cross_ids, ids = axis.cross_corr(ax.cat, ax2.cat, ax.keyws, ax2.keyws, r_cross=r_cross,  **kwargs)
+                cross_ids, ids = axis.cross_corr(ax.cat, ax2.cat, ax.keyws, ax2.keyws, r_cross=r_cross, newest=newest, **kwargs)
                 ax.update(cross_ids)
                 ax2.update(ids)
                 
@@ -187,7 +198,7 @@ class fslcat:
 
 
 
-    def plot(self, xkeyws={'1':['', 'LFIR']}, ykeyws={'1':['[CII]158', 'Lum'], '2':['','LFIR','/']}, zkeyws=None, pre_select={}, outdir='./figures/', r_cross=0.01, color='red', xlims=None, ylims=None, **kwargs):
+    def plot(self, xkeyws={'1':['', 'LFIR']}, ykeyws={'1':['[CII]158', 'Lum'], '2':['','LFIR','/']}, zkeyws=None, pre_select={}, outdir='./figures/', r_cross=0.01, color='red', xlims=None, ylims=None, fit=False, hist=False, newest=True, **kwargs):
         """
         The axis keywords specify the quantity to be ploted in the x, y (and optionally z) axes.
         Each quantity is constructed from one or two parameters from the catalog.
@@ -197,17 +208,23 @@ class fslcat:
         """
         
         # XAXIS
-        self.x = self.generate_axis(xkeyws, pre_select, r_cross)
+        self.x = self.generate_axis(xkeyws, pre_select, r_cross, newest)
+        if len(self.x.data) == 0:
+            print('No x-axis data found')
+            pass
         # YAXIS
-        self.y = self.generate_axis(ykeyws, pre_select, r_cross)
-        # Z-AXIS1
+        self.y = self.generate_axis(ykeyws, pre_select, r_cross, newest)
+        if len(self.y.data) == 0:
+            print('No y-axis data found')
+            pass
+        # ZAXIS
         if zkeyws is not None:
-            self.z = self.generate_axis(zkeyws, pre_select, r_cross)
+            self.z = self.generate_axis(zkeyws, pre_select, r_cross, newest)
         else:
             self.z = None
             
         print('Cross matching x and y-axes')
-        xids, yids = axis.cross_corr(self.x.cat, self.y.cat, self.x.keyws, self.y.keyws, r_cross=r_cross, **kwargs)
+        xids, yids = axis.cross_corr(self.x.cat, self.y.cat, self.x.keyws, self.y.keyws, r_cross=r_cross, newest=newest, **kwargs)
         print('Updating x and y-axes')
         self.x.update(xids)
         self.y.update(yids)
@@ -215,20 +232,18 @@ class fslcat:
         if zkeyws is not None:
             print('Cross matching x and z-axes')
             # Here we cross match but we keep all the entries in the x/y-axis even if they have NaN values in the z-axis
-            xids, zids = axis.cross_corr(self.x.cat, self.z.cat, self.x.keyws, self.z.keyws, keep_all=True, r_cross=r_cross, **kwargs)
+            xids, zids = axis.cross_corr(self.x.cat, self.z.cat, self.x.keyws, self.z.keyws, keep_all=True, r_cross=r_cross, newest=newest, **kwargs)
             print('Updating z-axis')
             self.z.update(zids, self.x.cat)
         
-        if np.isnan(self.x.data).all() or np.isnan(self.y.data).all(): sys.exit()
+        if np.isnan(self.x.data).all() or np.isnan(self.y.data).all():
+            pass
 
-        if self.z.data.size == 0:
-            print('WARNING: There are no data given the requested z-axis')
         else:
-            
             # Set up axes
             # PLOT
             print('Generating plot')
-            plotname = outdir + self.get_filename(xkeyws, ykeyws, zkeyws=zkeyws)
+            plotname = outdir + self.get_filename(xkeyws, ykeyws, zkeyws=zkeyws, pre_select=pre_select)
             pdfname = mpl.backends.backend_pdf.PdfPages(plotname+'.pdf')
             
             # Write data table
@@ -237,35 +252,146 @@ class fslcat:
             
             #nicePlot.nicePlot()
             
+            # Fit data
+            if fit != False:
+                xfitdata = np.copy(self.x.data)
+                xfiterr = np.copy(self.x.err)
+                yfitdata = np.copy(self.y.data)
+                yfiterr = np.copy(self.y.err)
+
+                xdataliminds = self.x.lim == -1.
+                xfiterr[xdataliminds] = xfitdata[xdataliminds] #* np.log10(xfitdata[xdataliminds]) * np.log(10)
+                xfitdata[xdataliminds] = 0. # np.nanmin(xfitdata)
+                ydataliminds = self.y.lim == -1.
+                yfiterr[ydataliminds] = yfitdata[ydataliminds] #* np.log10(yfitdata[ydataliminds]) * np.log(10)
+                yfitdata[ydataliminds] = 0. # np.nanmin(yfitdata)
+
+                censinds = (xfiterr > 0.) & (yfiterr > 0.)
+
+                myfit = linfit.linfit(xfitdata[censinds], yfitdata[censinds], xfiterr[censinds], yfiterr[censinds], log=True)
+
+                tmpbeta = [1., 1e5]
+                while True:
+                    bestfit = myfit.run(tmpbeta)
+                    if np.sqrt((abs(bestfit.beta[0]-tmpbeta[0])/abs(tmpbeta[0]))**2 + (abs(bestfit.beta[1]-tmpbeta[1])/abs(tmpbeta[1]))**2) <= 1e-5:
+                        break
+                    else:
+                        tmpbeta = bestfit.beta
+                    
+                ysig = np.std(yfitdata[censinds]-myfit.exp_func(bestfit.beta, xfitdata[censinds]))
+                xsig = np.std(xfitdata[censinds]-myfit.exp_invfunc(bestfit.beta, yfitdata[censinds]))
+
+                # FIT IN LOG SPACE!
+
+                from hyperfit.linfit import LinFit
+                ndata = len(xfitdata[censinds])
+                data, cov = np.empty((2, ndata)), np.empty((2, 2, ndata))
+                for i, (x, y, ex, ey, rho_xy) in enumerate(zip(xfitdata[censinds], yfitdata[censinds], xfiterr[censinds], yfiterr[censinds], np.zeros(ndata))):
+                    cov[:, :, i] = np.array([[ex ** 2, ex * ey * rho_xy], [ex * ey * rho_xy, ey ** 2]])
+                    data[:, i] = [x, y]
+                hf = LinFit(data, cov)
+                ipdb.set_trace()
+
+            fig_label = None
+            # Import nearby galaxy data for deficit plots
+            file_dir = '/Volumes/Gluon/lowz/goals/herschel/pacs/analysis/'
+            local_file_name = ''
+            if '2' in ykeyws.keys():
+                if ykeyws['2'][0] == 'LFIR_LIR' and xkeyws['1'][0] == 'LFIR_LIR':
+                    if ykeyws['1'][1] == '[OI]63': local_file_name = 'linefluxoi639-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                    elif ykeyws['1'][1] == '[OIII]88': local_file_name = 'linefluxoiii889-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                    elif ykeyws['1'][1] == '[NII]122': local_file_name = 'linefluxnii1229-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                    elif ykeyws['1'][1] == '[CII]158': local_file_name = 'linefluxcii1589-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                    elif ykeyws['1'][1] == '[NII]205': local_file_name = 'linefluxnii2058-firfluxip608-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                    elif ykeyws['1'][1] == '[CI]370': local_file_name = 'linefluxci3728-firfluxip608-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                    elif ykeyws['1'][1] == '[CI]609': local_file_name = 'linefluxci6098-firfluxip608-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                    fig_label = ykeyws['1'][1]+r'$\mu$m'
+                elif xkeyws['1'][0] == 'LFIR_LIR':
+                    if ykeyws['1'][1] == '[OIII]88' and ykeyws['2'][1] == '[NII]122': local_file_name = 'linefluxoiii889-linefluxnii1229-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                    elif ykeyws['1'][1] == '[OIII]88' and ykeyws['2'][1] == '[CII]158': local_file_name = 'linefluxoiii889-linefluxcii1589-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                    elif ykeyws['1'][1] == '[CII]158' and ykeyws['2'][1] == '[NII]205': local_file_name = 'linefluxcii1588-linefluxnii2058-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                    elif ykeyws['1'][1] == '[NII]122' and ykeyws['2'][1] == '[NII]205': local_file_name = 'linefluxnii1228-linefluxnii2058-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                    elif ykeyws['1'][1] == '[CI]370' and ykeyws['2'][1] == '[CI]609': local_file_name = 'linefluxci3728-linefluxci6098-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                elif xkeyws['1'][0] == 'FWHM':
+                    if xkeyws['1'][1] == '[CII]158': local_file_name = 'linefluxcii1589-firfluxip609-log_vs_linesigmacii1589-log_sort_firfluxip609-log.dat'
+
+            if '2' not in ykeyws.keys():
+                if xkeyws['1'][0] == 'FWHM':
+                    if ykeyws['1'][1] == '[CII]158': local_file_name = 'linefluxcii1589-log_vs_linesigmacii1589-log_sort_firfluxip609-log.dat'
+                
+            if local_file_name != '':
+                print('Loading nearby galaxy data')
+                try:
+                    tab = Table.read(file_dir+local_file_name, format='ascii.basic', data_start=3, comment='#', names=('0,','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'))
+                except:
+                    raise IOError('Local data table not found:', file_dir+local_file_name)
+                goals_lfir = {'data': tab['7'], 'err': tab['8']}
+                goals_def = {'data': tab['10'], 'err': tab['11']}
+                if xkeyws['1'][0] == 'FWHM':
+                    goals_lfir['data'] *= 2.355
+                    goals_lfir['err'] *= 2.355
+
+
+            # Set up figure
             if zkeyws is not None:
+                if self.z.data.size == 0: print('WARNING: There are no data given the requested z-axis')
+
                 if isinstance(self.z.data[0], float):
+                    if hist == True: raise ValueError('Side histograms and color bars representing numerical values are not compatible. Please, switch off one of them.')
                     fig, axs = plt.subplots(figsize=(12.2, 8.5*12.2/11.))
-                    plt.subplots_adjust(left=0.135, bottom=0.14, right=1.0, top=0.98)
+                    plt.subplots_adjust(left=0.13, bottom=0.14, right=0.985, top=0.98)
                 else:
-                    fig, axs = plt.subplots(figsize=(11., 8.5))
-                    plt.subplots_adjust(left=0.145, bottom=0.14, right=0.98, top=0.98)
+                    #fig, axs = plt.subplots(figsize=(11., 8.5))
+                    fig = plt.figure(figsize=(11., 8.5))
+                    if hist == False:
+                        plt.subplots_adjust(left=0.145, bottom=0.14, right=0.98, top=0.98)
+                        axs = fig.add_subplot(1, 1, 1)
+                    else:
+                        gs = fig.add_gridspec(2, 2, width_ratios=(4, 1), height_ratios=(1, 4),
+                                              left=0.145, bottom=0.14, right=0.98, top=0.98,
+                                              wspace=0.05, hspace=0.05)
+                        axs = fig.add_subplot(gs[1, 0])
+                        axs_xhist = fig.add_subplot(gs[0, 0], sharex=axs)
+                        axs_yhist = fig.add_subplot(gs[1, 1], sharey=axs)
+                        
             else:
-                fig, axs = plt.subplots(figsize=(11., 8.5))
-                plt.subplots_adjust(left=0.145, bottom=0.14, right=0.96, top=0.98)
-        
+                #fig, axs = plt.subplots(figsize=(11., 8.5))
+                fig = plt.figure(figsize=(11., 8.5))
+                if hist == False:
+                    plt.subplots_adjust(left=0.145, bottom=0.14, right=0.96, top=0.98)
+                    axs = fig.add_subplot(1, 1, 1)
+                else:
+                    gs = fig.add_gridspec(2, 2, width_ratios=(4, 1), height_ratios=(1, 4),
+                                          left=0.145, bottom=0.14, right=0.98, top=0.98,
+                                          wspace=0.05, hspace=0.05)
+                    axs = fig.add_subplot(gs[1, 0])
+                    axs_xhist = fig.add_subplot(gs[0, 0], sharex=axs)
+                    axs_yhist = fig.add_subplot(gs[1, 1], sharey=axs)
+               
+
+            # Set up axis style
             axs.minorticks_on()
             for side in axs.spines.keys(): axs.spines[side].set_linewidth(2.0)
-            axs.tick_params(axis='both', which='both', direction='in', top=True, right=True, labelsize=24, pad=10.)
-            axs.tick_params(axis='both', which='major', length=8, width=2.0)
-            axs.tick_params(axis='both', which='minor', length=4, width=2.0)
+            axs.tick_params(axis='both', which='both', direction='in', width=2.0, top=True, right=True, labelsize=24, pad=10.)
+            axs.tick_params(axis='both', which='major', length=8)
+            axs.tick_params(axis='both', which='minor', length=4)
             
             axs.set_xlabel(self.x.label[0]+' '+self.x.label[1], fontsize=32)
             axs.set_ylabel(self.y.label[0]+' '+self.y.label[1], fontsize=32)
-            #axs.set_xlabel(r'x', fontsize=20)
-            #axs.set_ylabel(r'y', fontsize=20)
             
+            # Set axes limits
             if xlims is None:
-                if self.x.keyws['1'][0] == 'z': axs.set(xlim=[0.8, 15.], xscale='log')
-                else: axs.set(xlim=[np.nanmin(self.x.data)/2., np.nanmax(self.x.data)*2.], xscale='log')
+                if self.x.keyws['1'][0] == 'z':
+                    xlims = [0.8, 15.]
+                else:
+                    xlims = [np.nanmin(self.x.data)/2., np.nanmax(self.x.data)*2.]                        
+                    axs.set(xlim=xlims, xscale='log')
             else:
                 axs.set(xlim=[xlims[0], xlims[1]], xscale=xlims[2])
+                
             if ylims is None:
-                axs.set(ylim=[np.nanmin(self.y.data)/2., np.nanmax(self.y.data)*2.], yscale='log')
+                ylims = [np.nanmin(self.y.data)/2., np.nanmax(self.y.data)*2.]
+                axs.set(ylim=ylims, yscale='log')
             else:
                 axs.set(ylim=[ylims[0], ylims[1]], yscale=ylims[2])
                 
@@ -274,74 +400,129 @@ class fslcat:
             #ax2.set_xticks(ax.get_xticks()[1:-1], np.round(cosmo.age(ax.get_xticks()[1:-1]).value,1), size=14)
             #ax2.set_xlabel(r'Age of the Universe [Gyr]', size=16, labelpad=10)
             
-            self.x.err[self.x.lim != 0] = self.x.data[self.x.lim != 0] * np.log10(axs.get_xlim()[1]/axs.get_xlim()[0]*4.) / 25.
-            self.y.err[self.y.lim != 0] = self.y.data[self.y.lim != 0] * np.log10(axs.get_ylim()[1]/axs.get_ylim()[0]*4.) / 25.
-            axs.errorbar(self.x.data, self.y.data, xerr=self.x.err, yerr=self.y.err,
-                         uplims = self.y.lim == -1., lolims = self.y.lim == 1., xuplims = self.x.lim == -1., xlolims = self.x.lim == 1.,
-                         ecolor='gray', elinewidth=1., linestyle='none', zorder=0) #fmt='o', alpha=1., mfc='none', ms=15., mec='black', mew=1., 
+            self.x.err[self.x.lim == 1] = self.x.data[self.x.lim == 1] / 2. * np.log10(xlims[1]/xlims[0]) / 6.
+            self.x.err[self.x.lim == -1] = self.x.data[self.x.lim == -1] / 4. * np.log10(xlims[1]/xlims[0]) / 6.
+            self.y.err[self.y.lim == 1] = self.y.data[self.y.lim == 1] / 2. * np.log10(ylims[1]/ylims[0]) / 7.
+            self.y.err[self.y.lim == -1] = self.y.data[self.y.lim == -1] / 4. * np.log10(ylims[1]/ylims[0]) / 5.5
             
+            axs.errorbar(self.x.data, self.y.data,
+                         xerr=self.x.err, yerr=self.y.err,
+                         uplims = self.y.lim == -1., lolims = self.y.lim == 1., xuplims = self.x.lim == -1., xlolims = self.x.lim == 1.,
+                         ecolor='gray', elinewidth=1., linestyle='none', zorder=0, fmt='o', mfc='black', mec='black', ms=0.) #fmt='o', alpha=1., mfc='none', ms=15., mec='black', mew=1., 
             
             if zkeyws is not None:
+
+                # Plot nearby galaxies
+                if local_file_name != '':
+                    if zkeyws['1'][0] == 'z': contc = 'gray'
+                    elif zkeyws['1'][0] == 'Type': contc = 'lightcoral'
+                    
+                    import seaborn as sns
+                    sns.kdeplot(x=goals_lfir['data'][(np.isnan(goals_lfir['data']) == False) & (np.isnan(goals_def['data']) == False)], y=goals_def['data'][(np.isnan(goals_lfir['data']) == False) & (np.isnan(goals_def['data']) == False)], levels=5, alpha=.5, color=contc, fill=True)
+                    
                 # Plot the color
                 if isinstance(self.z.data[0], float):
+
                     colors = plt.cm.get_cmap('rainbow')
                     vmin, vmax = [1., 15.] if self.z.keyws['1'][0] == 'z' else [np.nanmin(self.z.data), np.nanmax(self.z.data)]
                     if vmax/vmin > 10:
-                        sc = plt.scatter(self.x.data, self.y.data, c=self.z.data, cmap=colors, alpha=0.9, marker='o', s=15**2, edgecolors='black', linewidth=1., norm=mpl.colors.LogNorm(vmin=vmin, vmax=vmax))
+                        sc = axs.scatter(self.x.data, self.y.data, c=self.z.data, cmap=colors, alpha=1.0, marker='o', s=15**2, edgecolors='black', linewidth=1., norm=mpl.colors.LogNorm(vmin=vmin, vmax=vmax))
                     else:
-                        sc = plt.scatter(self.x.data, self.y.data, c=self.z.data, cmap=colors, alpha=0.9, marker='o', s=15**2, edgecolors='black', linewidth=1., vmin=vmin, vmax=vmax)
+                        sc = axs.scatter(self.x.data, self.y.data, c=self.z.data, cmap=colors, alpha=1.0, marker='o', s=15**2, edgecolors='black', linewidth=1., vmin=vmin, vmax=vmax)
                 else:
-                    #colors = plt.cm.get_cmap('gist_rainbow_r')
-                    #colors = plt.cm.get_cmap('Set1')
-                    if zkeyws['1'][1] == 'Simplified':
-                        self.z.data[np.where(self.z.data == 'Dwarf')[0]] = 'MS/SFG'
-                        self.z.data[np.where(self.z.data == 'Candidate')[0]] = 'MS/SFG'
-                        #self.z.data[np.where(self.z.data == 'DLAHost')[0]] = 'DLAHost'
-                        self.z.data[np.where(self.z.data == 'Hot-DOG')[0]] = 'QSO/AGN'
-                        self.z.data[np.where(self.z.data == 'LAB')[0]] = 'Opt-Sel'
-                        self.z.data[np.where(self.z.data == 'LAE')[0]] = 'Opt-Sel'
-                        self.z.data[np.where(self.z.data == 'LBG')[0]] = 'Opt-Sel'
-                        self.z.data[np.where(self.z.data == 'MS')[0]] = 'MS/SFG'
-                        self.z.data[np.where(self.z.data == 'QSO')[0]] = 'QSO/AGN'
-                        self.z.data[np.where(self.z.data == 'AGN')[0]] = 'QSO/AGN'
-                        #self.z.data[np.where(self.z.data == 'Quiescent')[0]] = 'QSC'
-                        self.z.data[np.where(self.z.data == 'SB')[0]] = 'SB/SMG'
-                        self.z.data[np.where(self.z.data == 'SFG')[0]] = 'MS/SFG'
-                        self.z.data[np.where(self.z.data == 'DSFG')[0]] = 'MS/SFG'
-                        self.z.data[np.where(self.z.data == 'SMG')[0]] = 'SB/SMG'
-                        self.z.data[np.where(self.z.data == '[CII]-emitter')[0]] = 'ALMA-Sel'
-                        self.z.data[np.where(self.z.data == 'PCM')[0]] = 'Cluster'
-                        self.z.data[np.where(self.z.data == 'SMG-candidate')[0]] = 'SB/SMG'
-                        
+                    if zkeyws['1'][1] == 'Simplified': self.z.simplify_type()
                     labels, indices = np.unique(self.z.data, return_inverse=True)
+                    
+                    if hist == True:
+                        for side in axs_xhist.spines.keys(): axs_xhist.spines[side].set_linewidth(2.0)
+                        axs_xhist.tick_params(axis='both', which='both', direction='in', width=2.0, top=True, right=True, labelbottom=False)
+                        axs_xhist.tick_params(axis='y', labelsize=20, pad=10.)
+                        for side in axs_yhist.spines.keys(): axs_yhist.spines[side].set_linewidth(2.0)
+                        axs_yhist.tick_params(axis='both', which='both', direction='in', width=2.0, top=True, right=True, labelleft=False)
+                        axs_yhist.tick_params(axis='x', labelsize=20, pad=10.)
+                        hstyle = {'linewidth':2.0}
+                        
                     for i in range(len(labels)):
                         colors = self.z.get_color('types')
                         type_inds = np.where(indices == i)[0]
-                        sc = plt.scatter(self.x.data[type_inds], self.y.data[type_inds], c=[colors[ind] for ind in type_inds], alpha=0.9, marker='o', s=15**2, edgecolors='black', linewidth=1., label=labels[i]) #, cmap=colors
-                        
+                        sc = axs.scatter(self.x.data[type_inds], self.y.data[type_inds], c=[colors[ind] for ind in type_inds], alpha=1.0, marker='o', s=15**2, edgecolors='black', linewidth=1., label=labels[i]) #, cmap=colors
+
+                        if hist == True:
+                            xbins = np.geomspace(xlims[0], xlims[1], 10) if axs.get_xaxis().get_scale() == 'log' else np.linspace(xlims[0], xlims[1], 10)
+                            ybins = np.geomspace(ylims[0], ylims[1], 10) if axs.get_yaxis().get_scale() == 'log' else np.linspace(ylims[0], ylims[1], 10)
+                            
+                            axs_xhist.hist(self.x.data[type_inds], bins=xbins, color=colors[type_inds[0]], histtype='step', **hstyle)
+                            axs_yhist.hist(self.y.data[type_inds], bins=ybins, orientation='horizontal', color=colors[type_inds[0]], histtype='step', **hstyle)
+                            
                     legend = axs.legend(loc='lower left', frameon=True, edgecolor='inherit', fontsize=16, borderaxespad=1.5) #, handletextpad=1)
                     frame = legend.get_frame()
                     frame.set_boxstyle('Square')
                     frame.set_linewidth(2.0)
                     frame.set_edgecolor('black')
-                    
+
                 if isinstance(self.z.data[0], float):
                     cbar = plt.colorbar(sc, aspect=30, pad=0.02)
-                    cbar.ax.tick_params(labelsize=24, length=4, width=2.)
+                    cbar.ax.tick_params(labelsize=24, length=8, width=2.)
+                    cbar.ax.tick_params(which='minor', length=4, width=2.)
                     cbar.set_label(self.z.label[0]+' '+self.z.label[1], rotation=90, size=32, labelpad=10.)
                     if isinstance(self.z.data[0], str): cbar.ax.set_yticklabels(labels)
                     cbar.outline.set_linewidth(2.0)
                 else:
                     #cbar = plt.colorbar(sc, aspect=30, pad=0.02, ticks=range(len(labels)))
                     pass
+
+                if fig_label is not None:
+                    txt = axs.text(0.6, 0.88, fig_label, fontsize=36, fontweight='heavy', color='k', transform=axs.transAxes)
+
             else:
-                linec = self.y.get_color('lines')
-                sc = plt.scatter(self.x.data, self.y.data, color=linec, alpha=1., marker='o', s=15**2, edgecolors='black', linewidth=1.)
+                linec = self.y.get_color('lines')[0]
+                if fig_label is not None:
+                    txt = axs.text(0.6, 0.88, fig_label, fontsize=36, fontweight='heavy', color=linec, transform=axs.transAxes)
+                    txt.set_path_effects([PathEffects.withStroke(linewidth=2., foreground='black')])
+                
+
+                if ykeyws['2'][0] == 'LFIR_LIR':
+                    lfir_ofm = np.nanmedian(np.log10(self.x.data))
+                    def_ofm = np.nanmedian(np.log10(self.y.data))
+                    axs.plot(np.array([1e-6, 1e6])*10**lfir_ofm, np.array([1e6, 1e-6])*10**def_ofm, color='gray', linestyle='dashed')
+
+                # Plot nearby galaxies
+                if local_file_name != '':
+                    import seaborn as sns
+                    sns.kdeplot(x=goals_lfir['data'][(np.isnan(goals_lfir['data']) == False) & (np.isnan(goals_def['data']) == False)], y=goals_def['data'][(np.isnan(goals_lfir['data']) == False) & (np.isnan(goals_def['data']) == False)], levels=5, alpha=.5, color=linec, fill=True)
+
+                sc = axs.scatter(self.x.data, self.y.data, color=linec, alpha=1., marker='o', s=15**2, edgecolors='black', linewidth=1.)
+                
+                if hist == True:
+                    for side in axs_xhist.spines.keys(): axs_xhist.spines[side].set_linewidth(2.0)
+                    axs_xhist.tick_params(axis='both', which='both', direction='in', width=2.0, top=True, right=True, labelbottom=False)
+                    axs_xhist.tick_params(axis='y', labelsize=20, pad=10.)
+                    for side in axs_yhist.spines.keys(): axs_yhist.spines[side].set_linewidth(2.0)
+                    axs_yhist.tick_params(axis='both', which='both', direction='in', width=2.0, top=True, right=True, labelleft=False)
+                    axs_yhist.tick_params(axis='x', labelsize=20, pad=10.)
+                    hstyle = {'linewidth':2.0}
+                    
+                    xbins = np.geomspace(xlims[0], xlims[1], 10) if axs.get_xaxis().get_scale() == 'log' else np.linspace(xlims[0], xlims[1], 10)
+                    ybins = np.geomspace(ylims[0], ylims[1], 10) if axs.get_yaxis().get_scale() == 'log' else np.linspace(ylims[0], ylims[1], 10)
+                    axs_xhist.hist(self.x.data, bins=xbins, color=linec, histtype='step', **hstyle)
+                    axs_yhist.hist(self.y.data, bins=ybins, orientation='horizontal', color=linec, histtype='step', **hstyle)
+                    
+
+            # Plot fit
+            if fit != False:
+                xfit = np.geomspace(xlims[0], xlims[1], 100)
+                yfit = myfit.exp_func(bestfit.beta, xfit)
+                axs.plot(xfit, yfit, color='black', linewidth=2)
+                axs.plot(xfit, yfit+ysig, color='black', linestyle='dashdot')
+                axs.plot(xfit, yfit-ysig, color='black', linestyle='dashdot')
+                
+                print('The best fit parameters are: y = x ^', round(bestfit.beta[0], 3), '(+/-', round(bestfit.sd_beta[0], 3), ') *', round(bestfit.beta[1], 3), '(+/-', round(bestfit.sd_beta[1], 3), ')')
+
                 
             pdfname.savefig(fig)
             pdfname.close()
             
-            plt.savefig(plotname+'.png')
+            plt.savefig(plotname+'.png', dpi=300, transparent=False)
             
             #plt.close()
             
