@@ -8,7 +8,7 @@ The catalog
 ~~~~~~~~~~~
 This repository contains the catalog of sources used to generate the figures included in the review paper entitled "Infrared fine-structure lines at high redshift" by Decarli and Diaz-Santos 2025 published on The Astronomy and Astrophysics Review (A&ARv) by Springer Nature. The data in the catalog is, to the best of the authors' knowledge, a complete collection of all observations carried out by infrared telescope facilities of far-infrared fine-structure emission lines from galaxies at redshifts larger than 1. The catalog contains 1550 entries, with more than 500 individual sources that have been observed in one emission line at least once.
 
-The catalog can be downloaded from XXX and contain the following information:
+The catalog can be downloaded from XXX and contains the following information:
 
 * Column (1): Flag indicating whether the observation is considered as valid for the catalog
 * Column (2): Flag indicating whether the source is the main targeted galaxy (M) or a companion (C)
@@ -64,7 +64,7 @@ The ``fslcat`` python tool uses the master catalog described above to make scatt
 
 To make plots, the user needs to specify the axes they want to visualize via keyword arguments using the syntaxis described below. Scatter plots can be simple (quantity A vs. quantity B) but also more complex. For instance, ``fslcat`` is capable of adding, subtracting, multiplicating or dividing quantities and plotting them in any axis. It also can color-code the data according to a third, simple or complex quantity. ``fslcat`` will automatically cross-correlate the data available for each dataset/column and trim the entries, selecting only the most updated (latest published) value of the quantities to be plotted.
 
-Labels, color-bars, axes and legends are generated automatically. Uncertainties, as well as upper and lower limits of simple or complex quantities are also propagated and calculated automatically.
+Labels, color-bars, axes and legends are generated automatically. Uncertainties, as well as upper and lower limits of simple or complex quantities are also propagated, calculated and constructed automatically.
 
 In addition to the plot, ``fslcat`` will also output the trimmed sub-sample of the catalog used to generate the figure. This is useful, independently of the plot, to extract and create sub-catalogs based on conditions applied to any of the quantities.
 
