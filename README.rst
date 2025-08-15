@@ -98,7 +98,7 @@ Requirements
 
 Referencing
 -----------
-If you use ``fslcat`` to make plots of the catalog or generate tables, please reference it as *Diaz-Santos et al. (2025)* (see bibcode below) and add a link to the GitHub repository: https://github.com/tdiazsantos/fslcat
+If you use ``fslcat`` to make plots of the catalog or generate tables, please add a link to the GitHub repository: https://github.com/tdiazsantos/fslcat
 
 Contributors
 ~~~~~~~~~~
