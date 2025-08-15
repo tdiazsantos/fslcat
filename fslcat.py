@@ -1,9 +1,6 @@
 import os, sys, copy
-#sys.path.insert(1, '/Users/tanio/Sync/pywork/pys')
 import pdb, ipdb
-from tqdm import tqdm
 import numpy as np
-import numpy.ma as ma
 import pandas as pd
 import importlib as impl
 import math
@@ -77,7 +74,14 @@ class fslcat:
 
         for key, value in pre_select.items():
             if type(value) == list:
-                fslcat_select = fslcat_select[(fslcat_select[key] >= value[0]) & (fslcat_select[key] <= value[1])]
+                if value[0] != 0 and value[1] != 0:
+                    fslcat_select = fslcat_select[(fslcat_select[key] >= value[0]) & (fslcat_select[key] <= value[1])]
+                elif np.isinf(value[0]) and value[1] != 0:
+                    fslcat_select = fslcat_select[(fslcat_select[key] <= value[1])]
+                elif value[0] != 0 and np.isinf(value[1]):
+                    fslcat_select = fslcat_select[(fslcat_select[key] >= value[0])]
+                else:
+                    raise ValueError('Value limits could not be parsed')
             else:
                 fslcat_select = fslcat_select[(fslcat_select[key] == value)]
 
@@ -197,14 +201,70 @@ class fslcat:
 
 
 
+    def nearby_catalog(self, fig_label, file_dir=None):
+        # Import nearby galaxy data for deficit plots
+        if file_dir == None: file_dir = '/catalogs/'
+        local_file_name = ''
+        if '2' in ykeyws.keys():
+            if ykeyws['2'][0] == 'LFIR_LIR' and xkeyws['1'][0] == 'LFIR_LIR':
+                if ykeyws['1'][1] == '[OI]63': local_file_name = 'linefluxoi639-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                elif ykeyws['1'][1] == '[OIII]88': local_file_name = 'linefluxoiii889-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                elif ykeyws['1'][1] == '[NII]122': local_file_name = 'linefluxnii1229-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                elif ykeyws['1'][1] == '[CII]158': local_file_name = 'linefluxcii1589-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                elif ykeyws['1'][1] == '[NII]205': local_file_name = 'linefluxnii2058-firfluxip608-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                elif ykeyws['1'][1] == '[CI]370': local_file_name = 'linefluxci3728-firfluxip608-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                elif ykeyws['1'][1] == '[CI]609': local_file_name = 'linefluxci6098-firfluxip608-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                fig_label = ykeyws['1'][1]+r'$\mu$m'
+            elif xkeyws['1'][0] == 'LFIR_LIR':
+                if ykeyws['1'][1] == '[OIII]88' and ykeyws['2'][1] == '[NII]122': local_file_name = 'linefluxoiii889-linefluxnii1229-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                elif ykeyws['1'][1] == '[OIII]88' and ykeyws['2'][1] == '[CII]158': local_file_name = 'linefluxoiii889-linefluxcii1589-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
+                elif ykeyws['1'][1] == '[CII]158' and ykeyws['2'][1] == '[NII]205': local_file_name = 'linefluxcii1588-linefluxnii2058-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                elif ykeyws['1'][1] == '[NII]122' and ykeyws['2'][1] == '[NII]205': local_file_name = 'linefluxnii1228-linefluxnii2058-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+                elif ykeyws['1'][1] == '[CI]370' and ykeyws['2'][1] == '[CI]609': local_file_name = 'linefluxci3728-linefluxci6098-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
+            elif xkeyws['1'][0] == 'FWHM':
+                if xkeyws['1'][1] == '[CII]158': local_file_name = 'linefluxcii1589-firfluxip609-log_vs_linesigmacii1589-log_sort_firfluxip609-log.dat'
+                
+        if '2' not in ykeyws.keys():
+            if xkeyws['1'][0] == 'FWHM':
+                if ykeyws['1'][1] == '[CII]158': local_file_name = 'linefluxcii1589-log_vs_linesigmacii1589-log_sort_firfluxip609-log.dat'
+                
+        if local_file_name != '':
+            print('Loading nearby galaxy data')
+            try:
+                tab = Table.read(file_dir+local_file_name, format='ascii.basic', data_start=3, comment='#', names=('0,','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'))
+            except:
+                raise IOError('Local data table not found:', file_dir+local_file_name)
+            goals_lfir = {'data': tab['7'], 'err': tab['8']}
+            goals_def = {'data': tab['10'], 'err': tab['11']}
+            if xkeyws['1'][0] == 'FWHM':
+                goals_lfir['data'] *= 2.355
+                goals_lfir['err'] *= 2.355
 
-    def plot(self, xkeyws={'1':['', 'LFIR']}, ykeyws={'1':['[CII]158', 'Lum'], '2':['','LFIR','/']}, zkeyws=None, pre_select={}, outdir='./figures/', r_cross=0.01, color='red', xlims=None, ylims=None, fit=False, hist=False, newest=True, **kwargs):
+        return goals_lfir, goals_def
+
+    
+
+    def plot(self, xkeyws={'1':['LFIR_LIR', 'MagCorr']}, ykeyws={'1':['Lum', '[CII]158'], '2':['LFIR_LIR', '', '/']}, zkeyws=None, pre_select={}, outdir='./figures/', r_cross=0.01, color='red', xlims=None, ylims=None, fit=False, hist=False, newest=True, nearby_data=False, **kwargs):
         """
         The axis keywords specify the quantity to be ploted in the x, y (and optionally z) axes.
-        Each quantity is constructed from one or two parameters from the catalog.
-        If two parameters are chosen, an operator must be passed, which will sum, subtract, multiply or divide the two.
-        The parameter of each axis keyword is given via a list.
-        The first element of the list specifies an emission line, the second the type of measurement, and the third the operator (in the case two parameters are given)
+        Each axis is constructed from one or two quantities from the catalog.
+        If two quantities are chosen, an operator must be passed, which will sum, subtract, multiply or divide the two.
+        The quantity/quantities of each axis keyword is given via a list.
+        For lines:
+           The first element of the list specifies the type of measurement ('Flux', 'Lum'(inosity), 'Cont'(inuum), 'FWHM'), the second specifies the emission line, and the third the operator (in case two parameters are given)
+        For other quantities:
+           The first element of the list specifies the quantity ('LIR', 'LIR_LFIR', 'LFIR', 'LFIR_LIR', 'z', 'LDist', 'Type', 'Instrument'), the second specifies any modulation (such as 'MagCorr' for LIRs and LFIRs)
+
+        pre_select: Filter entries by conditional arguments (e.g., pre_select={'z': [6,np.inf]} will select galaxies at z > 6). Default: {} (empty = no pre-selection; all catalog is used)
+        outdir: Folder to store the figures and sub-catalogs. Default: './figures/'
+        r_cross: Radius for cross-correlating sources (obsolete)
+        color: Color for the datapoints in case a color-coding is not used. Default: 'black'
+        xlims, ylims: Force the figure to plot only the axis ranges within those limits. Default: Plot the entire range of the dataset
+        fit: if [True], fit the data with a linear regresion. Default: [False]
+        hist: if [True], plot histogram of the axes in adjacent sub-panels. Default: [False]
+        newest: if [False], the entry kept for generating the plot and catalog will be the first ever measured, instead of the latest/newest. Default: [True]
+        nearby_data: if [True], plot a heat map of nearby dusty sources for comparison with the high-z data. Default: [False]
+        
         """
         
         # XAXIS
@@ -249,9 +309,7 @@ class fslcat:
             # Write data table
             sourcetypes = self.x.cat['Type'].values
             self.write_table(self.x, xkeyws, self.y, ykeyws, self.z, zkeyws, sourcetypes, plotname)
-            
-            #nicePlot.nicePlot()
-            
+                        
             # Fit data
             if fit != False:
                 xfitdata = np.copy(self.x.data)
@@ -293,44 +351,10 @@ class fslcat:
                 ipdb.set_trace()
 
             fig_label = None
-            # Import nearby galaxy data for deficit plots
-            file_dir = '/Volumes/Gluon/lowz/goals/herschel/pacs/analysis/'
-            local_file_name = ''
-            if '2' in ykeyws.keys():
-                if ykeyws['2'][0] == 'LFIR_LIR' and xkeyws['1'][0] == 'LFIR_LIR':
-                    if ykeyws['1'][1] == '[OI]63': local_file_name = 'linefluxoi639-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
-                    elif ykeyws['1'][1] == '[OIII]88': local_file_name = 'linefluxoiii889-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
-                    elif ykeyws['1'][1] == '[NII]122': local_file_name = 'linefluxnii1229-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
-                    elif ykeyws['1'][1] == '[CII]158': local_file_name = 'linefluxcii1589-firfluxip609-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
-                    elif ykeyws['1'][1] == '[NII]205': local_file_name = 'linefluxnii2058-firfluxip608-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
-                    elif ykeyws['1'][1] == '[CI]370': local_file_name = 'linefluxci3728-firfluxip608-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
-                    elif ykeyws['1'][1] == '[CI]609': local_file_name = 'linefluxci6098-firfluxip608-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
-                    fig_label = ykeyws['1'][1]+r'$\mu$m'
-                elif xkeyws['1'][0] == 'LFIR_LIR':
-                    if ykeyws['1'][1] == '[OIII]88' and ykeyws['2'][1] == '[NII]122': local_file_name = 'linefluxoiii889-linefluxnii1229-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
-                    elif ykeyws['1'][1] == '[OIII]88' and ykeyws['2'][1] == '[CII]158': local_file_name = 'linefluxoiii889-linefluxcii1589-log_vs_firfluxip609-log_sort_firfluxip609-log.dat'
-                    elif ykeyws['1'][1] == '[CII]158' and ykeyws['2'][1] == '[NII]205': local_file_name = 'linefluxcii1588-linefluxnii2058-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
-                    elif ykeyws['1'][1] == '[NII]122' and ykeyws['2'][1] == '[NII]205': local_file_name = 'linefluxnii1228-linefluxnii2058-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
-                    elif ykeyws['1'][1] == '[CI]370' and ykeyws['2'][1] == '[CI]609': local_file_name = 'linefluxci3728-linefluxci6098-log_vs_firfluxip608-log_sort_firfluxip608-log.dat'
-                elif xkeyws['1'][0] == 'FWHM':
-                    if xkeyws['1'][1] == '[CII]158': local_file_name = 'linefluxcii1589-firfluxip609-log_vs_linesigmacii1589-log_sort_firfluxip609-log.dat'
 
-            if '2' not in ykeyws.keys():
-                if xkeyws['1'][0] == 'FWHM':
-                    if ykeyws['1'][1] == '[CII]158': local_file_name = 'linefluxcii1589-log_vs_linesigmacii1589-log_sort_firfluxip609-log.dat'
-                
-            if local_file_name != '':
-                print('Loading nearby galaxy data')
-                try:
-                    tab = Table.read(file_dir+local_file_name, format='ascii.basic', data_start=3, comment='#', names=('0,','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15'))
-                except:
-                    raise IOError('Local data table not found:', file_dir+local_file_name)
-                goals_lfir = {'data': tab['7'], 'err': tab['8']}
-                goals_def = {'data': tab['10'], 'err': tab['11']}
-                if xkeyws['1'][0] == 'FWHM':
-                    goals_lfir['data'] *= 2.355
-                    goals_lfir['err'] *= 2.355
-
+            # Load catalog of nearby galaxy data if available
+            if nearby_data == True:
+                goals_lfir, goals_def = self.nearby_catalog(fig_label)
 
             # Set up figure
             if zkeyws is not None:
@@ -413,7 +437,7 @@ class fslcat:
             if zkeyws is not None:
 
                 # Plot nearby galaxies
-                if local_file_name != '':
+                if nearby_data == True:
                     if zkeyws['1'][0] == 'z': contc = 'gray'
                     elif zkeyws['1'][0] == 'Type': contc = 'lightcoral'
                     
@@ -423,6 +447,10 @@ class fslcat:
                 # Plot the color
                 if isinstance(self.z.data[0], float):
 
+                    if np.sum(np.isnan(self.z.data)) > 0:
+                        z_nans = np.isnan(self.z.data)
+                        sc = axs.scatter(self.x.data[z_nans], self.y.data[z_nans], color='black', alpha=1.0, marker='o', s=10**2, edgecolors='black', linewidth=1.)
+                        
                     colors = plt.cm.get_cmap('rainbow')
                     vmin, vmax = [1., 15.] if self.z.keyws['1'][0] == 'z' else [np.nanmin(self.z.data), np.nanmax(self.z.data)]
                     if vmax/vmin > 10:
@@ -487,7 +515,7 @@ class fslcat:
                     axs.plot(np.array([1e-6, 1e6])*10**lfir_ofm, np.array([1e6, 1e-6])*10**def_ofm, color='gray', linestyle='dashed')
 
                 # Plot nearby galaxies
-                if local_file_name != '':
+                if nearby_data == True:
                     import seaborn as sns
                     sns.kdeplot(x=goals_lfir['data'][(np.isnan(goals_lfir['data']) == False) & (np.isnan(goals_def['data']) == False)], y=goals_def['data'][(np.isnan(goals_lfir['data']) == False) & (np.isnan(goals_def['data']) == False)], levels=5, alpha=.5, color=linec, fill=True)
 
