@@ -7,7 +7,7 @@ This repository contains the catalog of sources used to generate the figures inc
 
 The catalog
 ~~~~~~~~~~~
-The catalog can be downloaded from `this Google spreadsheet`_ <https://docs.google.com/spreadsheets/d/1GBEhRR3zSSVupEGh4PbrzMAKzs3w1x2MC6JLtsIIgbk/edit?usp=sharing> and contains the following information:
+The catalog can be downloaded from `this Google spreadsheet`_ and contains the following information:
 
 * Column (1): Flag indicating whether the observation is considered as valid for the catalog
 * Column (2): Flag indicating whether the source is the main targeted galaxy (M) or a companion (C)
@@ -111,3 +111,6 @@ Contributors
 Bibcode
 ~~~~~~~~~
 TBD
+
+
+.. _this Google spreadsheet: https://docs.google.com/spreadsheets/d/1GBEhRR3zSSVupEGh4PbrzMAKzs3w1x2MC6JLtsIIgbk/edit?usp=sharing
