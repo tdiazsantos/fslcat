@@ -95,7 +95,7 @@ A few plot examples:
 
 > ``cat.plot(xkeyws={'1':['FWHM', '[CII]158']}, ykeyws={'1':['Lum', '[CII]158'], '2':['Lum', '[CI]370', '/']}, zkeyws={'1':['z', '']}, pre_select={'z':[6,np.inf], 'Instrument':'ALMA'})``
 
-* Guidelines:
+Guidelines:
 
 Each axis is composed by one or two quantities, each one defined as an entry in the dictionary that specifies the axis. Each quantity is described by list of items that selects the type of quantity to be used.
 
