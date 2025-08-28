@@ -95,6 +95,16 @@ A few plot examples:
 
 > ``cat.plot(xkeyws={'1':['FWHM', '[CII]158']}, ykeyws={'1':['Lum', '[CII]158'], '2':['Lum', '[CI]370', '/']}, zkeyws={'1':['z', '']}, pre_select={'z':[6,np.inf], 'Instrument':'ALMA'})``
 
+* Guidelines:
+
+Each axis is composed by one or two quantities, each one defined as an entry in the dictionary that specifies the axis. Each quantity is described by list of items that selects the type of quantity to be used.
+
+The first item of the list usually refers to the quantity itself, and it can be 'Lum' (luminosity) or 'Flux" in case of lines and continua, and "FWHM" (full-width at half-maximum) in case of lines. The second item specifies the line: [OIII]52, [NIII]57, [OI]63, [OIII]88, [NII]122, [CII]158, [OI]146, [NII]205, [CI]370, or [CI]609. And the following/subsequent item specifies whether magnification correction, 'MagCorr', is to be applied. Infrared luminosities are specified as first items as 'LFIR_LIR' or 'LIR_LFIR', meaning to plot far-infrared luminosities that either have been calculated explicitly in the bibliography or that come from infrared luminosities, scaled down by a factor of 2. Similarly, 'LIR_LFIR' means to plot infrared luminosities that either have been calculated explicitly in the bibliography or that come from far-infrared luminosities, scaled up by a factor of 2. Plain 'LIR' or 'LFIR' items can be used as well, but most sources do not have both measurements available, which reduces the number of datapoints available for the plots.
+
+When two quantities are specified as entries of the axis dictionary it means that an operation is going to applied on them. This can be '+', '-', '*' or '/'. The operator must be specified as the last item in the list describing the sencond quantity.
+
+A pre-selection on specific parameters available in the catalog can be made via the 'pre_select' keyword, which will extract sub-sets of sources based on the constraints. These can be based on flux cuts, redshift ranges or galaxy types, for example.
+
 Requirements
 ~~~~~~~~~
 ``scipy``, ``astropy``, ``numpy``, ``pandas``, ``importlib``, ``math``, ``matplotlib``
