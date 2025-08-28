@@ -3,12 +3,10 @@
 
 Purpose and content
 -----------
-
 This repository contains the catalog of sources used to generate the figures included in the review paper entitled "Infrared fine-structure lines at high redshift" by Decarli and Diaz-Santos 2025 published on The Astronomy and Astrophysics Review (A&ARv) by Springer Nature. The data in the catalog is, to the best of the authors' knowledge, a complete collection of all observations carried out by infrared telescope facilities of far-infrared fine-structure emission lines from galaxies at redshifts larger than 1. The catalog contains 1550 entries, with more than 500 individual sources that have been observed in one emission line at least once.
 
 The catalog
 ~~~~~~~~~~~
-
 The catalog can be downloaded from `this Google spreadsheet`_ <https://docs.google.com/spreadsheets/d/1GBEhRR3zSSVupEGh4PbrzMAKzs3w1x2MC6JLtsIIgbk/edit?usp=sharing> and contains the following information:
 
 * Column (1): Flag indicating whether the observation is considered as valid for the catalog
@@ -68,6 +66,10 @@ To make plots, the user needs to specify the axes they want to visualize via key
 Labels, color-bars, axes and legends are generated automatically. Uncertainties, as well as upper and lower limits of simple or complex quantities are also propagated, calculated and constructed automatically.
 
 In addition to the plot, ``fslcat`` will also output the trimmed sub-sample of the catalog used to generate the figure. This is useful, independently of the plot, to extract and create sub-catalogs based on conditions applied to any of the quantities.
+
+The notebook
+~~~~~~~~~~~~
+The repository also includes a jupyter notebook with the set-up necessary to solve the equations of statistical equilibrium and calculate the population levels of atoms and ions with different number of electrons. The code not only calculates the emission line luminosities of a variety of species as a function of the parameters that control the gas excitation (Tkin, n_c), but also provides useful quantities related to the line transitions, such as their optical depths as a function of the column density, or their critical densities as a function of the gas temperature and the type of collisional partners. The notebook also includes the scripts necessary to reproduce all the plots included in the review.
 
 Usage in iPython
 ------------
