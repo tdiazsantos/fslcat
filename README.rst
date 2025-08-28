@@ -105,8 +105,7 @@ If you use ``fslcat`` to make plots of the catalog or generate tables, please ad
 
 Contributors
 ~~~~~~~~~~
-* Tanio Diaz-Santos
-* Roberto Decarli
+* Tanio Diaz-Santos & Roberto Decarli
 
 Bibcode
 ~~~~~~~~~
