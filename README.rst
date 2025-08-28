@@ -3,7 +3,7 @@
 
 Purpose and content
 -----------
-This repository contains the catalog of sources used to generate the figures included in the review paper entitled "Infrared fine-structure lines at high redshift" by Decarli and Diaz-Santos 2025 published on The Astronomy and Astrophysics Review (A&ARv) by Springer Nature. The data in the catalog is, to the best of the authors' knowledge, a complete collection of all observations carried out by infrared telescope facilities of far-infrared fine-structure emission lines from galaxies at redshifts larger than 1. The catalog contains 1550 entries, with more than 500 individual sources that have been observed in one emission line at least once.
+This repository contains the catalog of sources used to generate the figures included in the review paper entitled "Infrared fine-structure lines at high redshift" by Decarli and Diaz-Santos 2025 published on The Astronomy and Astrophysics Review (A&ARv) by Springer Nature. The data in the catalog is, to the best of the authors' knowledge, a complete collection of all observations carried out by infrared telescope facilities of far-infrared fine-structure emission lines from galaxies at redshifts larger than 1. The catalog contains 1550 entries, with more than 500 individual sources that have been observed in one emission line at least once. In addition, the ``fslcat`` repository contains (1) a python code that handles and plots the data contained in the catalog, and (2) a jupyter notebook that describes how the equations of statistical equilibrium can be solved to calculate the population levels of a particular species.
 
 The catalog
 ~~~~~~~~~~~
