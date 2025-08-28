@@ -4,11 +4,12 @@
 Purpose and content
 -----------
 
-The catalog
-~~~~~~~~~~~
 This repository contains the catalog of sources used to generate the figures included in the review paper entitled "Infrared fine-structure lines at high redshift" by Decarli and Diaz-Santos 2025 published on The Astronomy and Astrophysics Review (A&ARv) by Springer Nature. The data in the catalog is, to the best of the authors' knowledge, a complete collection of all observations carried out by infrared telescope facilities of far-infrared fine-structure emission lines from galaxies at redshifts larger than 1. The catalog contains 1550 entries, with more than 500 individual sources that have been observed in one emission line at least once.
 
-The catalog can be downloaded from XXX and contains the following information:
+The catalog
+~~~~~~~~~~~
+
+The catalog can be downloaded from `this Google spreadsheet`_ <https://docs.google.com/spreadsheets/d/1GBEhRR3zSSVupEGh4PbrzMAKzs3w1x2MC6JLtsIIgbk/edit?usp=sharing> and contains the following information:
 
 * Column (1): Flag indicating whether the observation is considered as valid for the catalog
 * Column (2): Flag indicating whether the source is the main targeted galaxy (M) or a companion (C)
