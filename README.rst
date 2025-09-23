@@ -59,13 +59,13 @@ The catalog can be downloaded from `this Google spreadsheet`_ and contains the f
 
 The tool
 ~~~~~~~~~
-The ``fslcat`` python tool uses the master catalog described above to make scatter plots using the available data. The user can plot the entire catalog or a specific sub-sample by selecting sources based on conditions applied to any of the quantities.
+The ``fslcat`` python tool uses the master catalog described above to make scatter plots using the available data. The user can plot the entire catalog or a specific sub-sample by selecting sources based on conditions applied to any of the quantities available in the catalog.
 
-To make plots, the user needs to specify the axes they want to visualize via keyword arguments using the syntaxis described below. Scatter plots can be simple (quantity A vs. quantity B) but also more complex. For instance, ``fslcat`` is capable of adding, subtracting, multiplicating or dividing quantities and plotting them in any axis. It also can color-code the data according to a third, simple or complex quantity. ``fslcat`` will automatically cross-correlate the data available for each dataset/column and trim the entries, selecting only the most updated (latest published) value of the quantities to be plotted.
+To make plots, the user needs to specify the axes they want to visualize via keyword arguments using the syntaxis described below. Scatter plots can be simple (quantity A vs. quantity B) but also more complex. For instance, ``fslcat`` is capable of automatically adding, subtracting, multiplicating or dividing quantities and plotting them in any axis. It also can color-code the data according to a third, simple or complex quantity. ``fslcat`` will automatically cross-correlate the data available for each dataset/column and trim the entries, selecting only the most updated (latest published) value of the quantities to be plotted.
 
 Labels, color-bars, axes and legends are generated automatically. Uncertainties, as well as upper and lower limits of simple or complex quantities are also propagated, calculated and constructed automatically.
 
-In addition to the plot, ``fslcat`` will also output the trimmed sub-sample of the catalog used to generate the figure. This is useful, independently of the plot, to extract and create sub-catalogs based on conditions applied to any of the quantities.
+In addition to the plot, ``fslcat`` will also output the trimmed, sub-sample of sources used to generate the figure. This is useful, independently of the plot, to extract and create sub-catalogs based on conditions applied to any of the quantities.
 
 The notebook
 ~~~~~~~~~~~~
