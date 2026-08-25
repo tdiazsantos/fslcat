@@ -65,7 +65,7 @@ To make plots, the user needs to specify the axes they want to visualize via key
 
 Labels, color-bars, axes and legends are generated automatically. Uncertainties, as well as upper and lower limits of simple or complex quantities are also propagated, calculated and constructed automatically.
 
-In addition to the plot, ``fslcat`` will also output the trimmed, sub-sample of sources used to generate the figure. This is useful, independently of the plot, to extract and create sub-catalogs based on conditions applied to any of the quantities.
+*In addition to the plot, ``fslcat`` will also output the trimmed, sub-sample of sources used to generate the figure. This is useful, independently of the plot, to extract and create sub-catalogs based on conditions applied to any of the quantities.
 
 The notebook
 ~~~~~~~~~~~~
@@ -119,7 +119,26 @@ Contributors
 
 Bibcode
 ~~~~~~~~~
-TBD
+@ARTICLE{2025A&ARv..33....4D,
+       author = {{Decarli}, Roberto and {D{\'\i}az-Santos}, Tanio},
+        title = "{Infrared fine-structure lines at high redshift}",
+      journal = {\aapr},
+     keywords = {ISM, Evolution, Lines and bands, Galaxies, Abundances, High-redshift, Physical Sciences, Astronomical and Space Sciences, Astrophysics of Galaxies},
+         year = 2025,
+        month = sep,
+       volume = {33},
+       number = {1},
+          eid = {4},
+        pages = {4},
+          doi = {10.1007/s00159-025-00162-7},
+archivePrefix = {arXiv},
+       eprint = {2509.19444},
+ primaryClass = {astro-ph.GA},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2025A&ARv..33....4D},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+}
+
+
 
 
 .. _this Google spreadsheet: https://docs.google.com/spreadsheets/d/1GBEhRR3zSSVupEGh4PbrzMAKzs3w1x2MC6JLtsIIgbk/edit?usp=sharing
