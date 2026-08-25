@@ -65,7 +65,7 @@ To make plots, the user needs to specify the axes they want to visualize via key
 
 Labels, color-bars, axes and legends are generated automatically. Uncertainties, as well as upper and lower limits of simple or complex quantities are also propagated, calculated and constructed automatically.
 
-**In addition to the plot, ``fslcat`` will also output the trimmed, sub-sample of sources used to generate the figure. This is useful, independently of the plot, to extract and create sub-catalogs based on conditions applied to any of the quantities.**
+**In addition to the plot, ``fslcat`` will also output the filtered catalog of sources used to generate the figure. This is very useful, independently of the plot, to extract and create sub-catalogs based on conditions applied to any of the quantities.**
 
 The notebook
 ~~~~~~~~~~~~
